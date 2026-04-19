@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <think>asdasdasdasd</think>
+
+    <script>
+
+        let html=` <think>begin_search_query|> typescript 发明者 <|end_search_query|>
+
+User</think>`
+ let match=html.match(/<think>([\s\S]*?)<\/think>/g)
+    console.log(match)
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <script src="//mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <script>
+        //对于 PDF文件的预览，可以使用PDF.js一个由 Mozilla开发的 JavaScript库。这个库能够在不同的浏览器中解析和渲染PDF 文件。首先，您需要引入PDF.jS。您可以从PDF.js GitHub 仓库 获取到它，也可以通过CDN 引入:
+
+        var url = "您的PDF文件链接";
+        var pdfjsLib = window['pdfjs-dist/build/pdf'];
+       //为了能在不同的浏览器中都正确运行，禁用worker功能是必须得
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js'; 
+        var loadingTask = pdfjsLib.getDocument(url); 
+        LoadingTask.promise.then(function (pdf) {
+            console.log('PDF loaded');
+            //获取第一页
+            pdf.getPage(1).then(function (page) {
+                console.log('Page loaded');
+                var scale = 1.5; 
+                var viewport = page.getViewport({ scale: scale });
+                //准备放置PDF的容器
+                var canvas = document.createElement('canvas');
+                var context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width; 
+                document.getElementById('pdfviewer').appendchild(canvas);
+                //开始渲染
+                var renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                var renderTask = page.render(renderContext); 
+                renderTask.promise.then(function () {
+                    console.log('Page rendered');
+                });
+            });
+        },function (reason) {
+            //pdf加载失败
+            console.error(reason);
+        });
+    </script>
+</body>
+
+</html>

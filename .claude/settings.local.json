@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' tf E:/equipment/jar/gaisoftmes.jar)",
+      "Bash(grep -v \"^BOOT-INF/classes/$\\\\|^BOOT-INF/classes/com/$\")",
+      "Bash(mkdir -p /tmp/jar_extract)",
+      "Read(//tmp/**)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' xf E:/equipment/jar/gaisoftmes.jar BOOT-INF/lib/gaisoft-common-3.8.9.jar)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' tf BOOT-INF/lib/gaisoft-common-3.8.9.jar)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' xf BOOT-INF/lib/gaisoft-common-3.8.9.jar com/gaisoft/common/utils/http/HttpUtils.class 'com/gaisoft/common/utils/http/HttpUtils$1.class' 'com/gaisoft/common/utils/http/HttpUtils$TrustAnyHostnameVerifier.class' 'com/gaisoft/common/utils/http/HttpUtils$TrustAnyTrustManager.class')",
+      "Bash('/c/Program Files/Java/jdk-22/bin/javap' -c -p com/gaisoft/common/utils/http/HttpUtils.class)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/javap' -p com/gaisoft/common/utils/http/HttpUtils.class)",
+      "Bash(curl -L -o /tmp/cfr.jar https://github.com/leibnitz27/cfr/releases/download/0.152/cfr-0.152.jar)",
+      "Bash(echo \"exit: $?\")",
+      "Bash($JAVA_HOME/bin/java:*)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' xf E:/equipment/jar/gaisoftmes.jar BOOT-INF/lib/gaisoft-aftersales-3.8.9.jar BOOT-INF/classes/application.yml BOOT-INF/classes/application-prod.yml)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' tf BOOT-INF/lib/gaisoft-aftersales-3.8.9.jar)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' xf BOOT-INF/lib/gaisoft-aftersales-3.8.9.jar com/gaisoft/kb/controller/GetAuthorization.class 'com/gaisoft/kb/controller/GetAuthorization$CacheEntry.class')",
+      "Bash('/c/Program Files/Java/jdk-22/bin/java' -jar /tmp/cfr.jar com/gaisoft/kb/controller/GetAuthorization.class)",
+      "Bash(docker inspect equipment-front:*)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/jar' xf E:/equipment/jar/gaisoftmes.jar BOOT-INF/lib/slf4j-api-1.7.36.jar)",
+      "Bash(ls BOOT-INF/lib/slf4j*)",
+      "Bash('/c/Program Files/Java/jdk-22/bin/javac' --release 8 -cp 'BOOT-INF/lib/gaisoft-common-3.8.9.jar;BOOT-INF/lib/slf4j-api-1.7.36.jar' -d . /tmp/jar_extract/HttpUtils.java)"
+    ]
+  }
+}

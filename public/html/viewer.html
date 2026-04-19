@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>远程文件预览工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            animation: fadeIn 0.8s ease;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            background: linear-gradient(45deg, #4361ee, #3a0ca3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #555;
+            max-width: 700px;
+            margin: 0 auto 25px;
+            line-height: 1.8;
+        }
+        
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            margin-bottom: 30px;
+            animation: slideUp 0.6s ease;
+        }
+        
+        .url-input-section {
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(120deg, #e0f7fa, #bbdefb);
+        }
+        
+        .input-group {
+            display: flex;
+            max-width: 800px;
+            margin: 0 auto 25px;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.2);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+        
+        #file-url {
+            flex: 1;
+            padding: 18px 25px;
+            border: none;
+            font-size: 1.1rem;
+            outline: none;
+            background: rgba(255, 255, 255, 0.95);
+        }
+        
+        #file-url::placeholder {
+            color: #90a4ae;
+        }
+        
+        #load-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 35px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        #load-btn:hover {
+            background: var(--secondary-color);
+        }
+        
+        .example-urls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .example-btn {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .example-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .preview-section {
+            display: none;
+            padding: 30px;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .file-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+        
+        .file-details h2 {
+            margin-bottom: 5px;
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        .file-size {
+            color: #666;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary-color);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(67, 97, 238, 0.2);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .back-btn {
+            background: #6c757d;
+        }
+        
+        .back-btn:hover {
+            background: #5a6268;
+        }
+        
+        .preview-container {
+            margin-top: 20px;
+            min-height: 500px;
+            max-height: 70vh;
+            overflow: auto;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            background-color: #fafafa;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        #pdf-preview, #image-preview, #excel-preview {
+            width: 100%;
+        }
+        
+        .preview-container img {
+            max-width: 100%;
+            max-height: 65vh;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        
+        #excel-preview {
+            overflow: auto;
+        }
+        
+        #excel-preview table {
+            border-collapse: collapse;
+            width: 100%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        #excel-preview th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 14px 18px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+        
+        #excel-preview td {
+            padding: 12px 18px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        #excel-preview tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        #excel-preview tr:hover {
+            background-color: #f1f4f8;
+        }
+        
+        .unsupported-format {
+            text-align: center;
+            padding: 60px 40px;
+            color: #666;
+        }
+        
+        .unsupported-format i {
+            font-size: 4rem;
+            color: var(--warning-color);
+            margin-bottom: 25px;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(67, 97, 238, 0.2);
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+        
+        .error-message {
+            color: var(--danger-color);
+            background: #ffebee;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            display: none;
+            text-align: center;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .canvas-container {
+            text-align: center;
+        }
+        
+        .pdf-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 25px;
+            gap: 20px;
+            padding: 15px;
+            background: #f1f4f8;
+            border-radius: var(--border-radius);
+        }
+        
+        .page-info {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .url-input-section {
+                padding: 25px 15px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            #load-btn {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .preview-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .file-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .preview-container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-file-alt"></i> 远程文件预览工具</h1>
+            <p class="subtitle">通过服务端返回的文件URL预览PDF文档、Excel表格、图片文件（支持Word文档下载）</p>
+        </header>
+        
+        <main>
+            <div class="card">
+                <div class="url-input-section">
+                    <div class="input-group">
+                        <input type="text" id="file-url" placeholder="输入服务端返回的文件URL (支持PDF、Word、Excel、图片)" autocomplete="off">
+                        <button id="load-btn"><i class="fas fa-cloud-download-alt"></i> 加载文件</button>
+                    </div>
+                    
+                    <div class="example-urls">
+                        <p>示例文件：</p>
+                        <button class="example-btn" data-url="https://example.com/sample.pdf">PDF文档</button>
+                        <button class="example-btn" data-url="https://example.com/sample.xlsx">Excel表格</button>
+                        <button class="example-btn" data-url="https://example.com/sample.jpg">图片文件</button>
+                        <button class="example-btn" data-url="https://example.com/sample.docx">Word文档</button>
+                    </div>
+                    
+                    <div class="error-message" id="error-message"></div>
+                </div>
+                
+                <div class="preview-section" id="preview-section">
+                    <div class="preview-header">
+                        <div class="file-info">
+                            <div class="file-icon" id="file-icon"><i class="fas fa-file"></i></div>
+                            <div class="file-details">
+                                <h2 id="file-name">document.pdf</h2>
+                                <div class="file-size" id="file-size"><i class="fas fa-hdd"></i> 0 KB</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn back-btn" id="back-btn"><i class="fas fa-arrow-left"></i> 返回</button>
+                            <button class="btn" id="download-btn"><i class="fas fa-download"></i> 下载文件</button>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-container" id="preview-container">
+                        <div class="loading" id="loading">
+                            <div class="spinner"></div>
+                            <p>正在加载文件内容，请稍候...</p>
+                        </div>
+                        <div id="pdf-preview"></div>
+                        <div id="image-preview"></div>
+                        <div id="excel-preview"></div>
+                        <div id="word-preview" class="unsupported-format">
+                            <i class="fas fa-info-circle"></i>
+                            <h3>Word文档预览</h3>
+                            <p>由于浏览器限制，无法直接在网页中预览Word文档内容。</p>
+                            <p>请点击下载按钮保存文件后在本地查看。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>远程文件预览工具 &copy; 2023 | 纯前端实现 | 支持PDF、Excel、图片和Word文件</p>
+        </footer>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const fileUrlInput = document.getElementById('file-url');
+        const loadBtn = document.getElementById('load-btn');
+        const previewSection = document.getElementById('preview-section');
+        const previewContainer = document.getElementById('preview-container');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        const fileIcon = document.getElementById('file-icon');
+        const backBtn = document.getElementById('back-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const errorMessage = document.getElementById('error-message');
+        const loadingIndicator = document.getElementById('loading');
+        const exampleBtns = document.querySelectorAll('.example-btn');
+        
+        // 当前文件信息
+        let currentFile = null;
+        let currentFileUrl = '';
+        let currentFileType = '';
+        
+        // 初始化PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // 绑定事件
+        loadBtn.addEventListener('click', loadFileFromUrl);
+        backBtn.addEventListener('click', showInputSection);
+        downloadBtn.addEventListener('click', downloadFile);
+        fileUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loadFileFromUrl();
+        });
+        
+        // 示例按钮事件
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                fileUrlInput.value = btn.dataset.url;
+                loadFileFromUrl();
+            });
+        });
+        
+        // 加载远程文件
+        function loadFileFromUrl() {
+            const url = fileUrlInput.value.trim();
+            
+            if (!url) {
+                showError('请输入有效的文件URL');
+                return;
+            }
+            
+            // 验证URL格式
+            if (!isValidUrl(url)) {
+                showError('URL格式无效，请检查后重试');
+                return;
+            }
+            
+            // 重置错误消息
+            errorMessage.style.display = 'none';
+            
+            // 显示加载指示器
+            showLoading();
+            
+            // 保存当前文件URL
+            currentFileUrl = url;
+            
+            // 获取文件名和扩展名
+            const fileNameFromUrl = getFileNameFromUrl(url);
+            const extension = getFileExtension(fileNameFromUrl);
+            
+            // 设置文件信息
+            fileName.textContent = fileNameFromUrl;
+            fileSize.innerHTML = `<i class="fas fa-hdd"></i> 加载中...`;
+            setFileIcon(extension);
+            
+            // 获取文件并预览
+            fetchFile(url, extension);
+        }
+        
+        // 获取文件
+        function fetchFile(url, extension) {
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误! 状态: ${response.status}`);
+                    }
+                    
+                    // 获取文件大小
+                    const contentLength = response.headers.get('Content-Length');
+                    if (contentLength) {
+                        fileSize.innerHTML = `<i class="fas fa-hdd"></i> ${formatFileSize(contentLength)}`;
+                    }
+                    
+                    // 根据文件类型处理响应
+                    if (['pdf', 'xlsx', 'xls'].includes(extension)) {
+                        return response.arrayBuffer();
+                    } else {
+                        return response.blob();
+                    }
+                })
+                .then(data => {
+                    currentFile = data;
+                    currentFileType = extension;
+                    
+                    // 隐藏加载指示器
+                    hideLoading();
+                    
+                    // 显示预览区域
+                    showPreviewSection();
+                    
+                    // 预览文件
+                    previewFile(extension, data);
+                })
+                .catch(err => {
+                    hideLoading();
+                    showError(`加载文件失败: ${err.message}`);
+                });
+        }
+        
+        // 预览文件
+        function previewFile(extension, data) {
+            // 重置预览区域
+            resetPreview();
+            
+            if (extension === 'pdf') {
+                previewPDF(data);
+            } else if (['xlsx', 'xls'].includes(extension)) {
+                previewExcel(data);
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension)) {
+                previewImage(data);
+            } else if (['doc', 'docx'].includes(extension)) {
+                showWordPreview();
+            } else {
+                showError('不支持的文件格式');
+            }
+        }
+        
+        // 预览PDF文件
+        function previewPDF(arrayBuffer) {
+            const container = document.getElementById('pdf-preview');
+            
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            
+            loadingTask.promise.then(pdf => {
+                // 默认显示第一页
+                renderPage(pdf, 1, container);
+                
+                // 添加分页控件
+                const pageControls = document.createElement('div');
+                pageControls.className = 'pdf-controls';
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'btn btn-outline';
+                prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> 上一页';
+                prevBtn.addEventListener('click', () => {
+                    const currentPage = parseInt(pageInfo.textContent.split('/')[0]);
+                    if (currentPage > 1) {
+                        renderPage(pdf, currentPage - 1, container);
+                        pageInfo.textContent = `${currentPage - 1}/${pdf.numPages}`;
+                    }
+                });
+                
+                const pageInfo = document.createElement('span');
+                pageInfo.className = 'page-info';
+                pageInfo.textContent = `1/${pdf.numPages}`;
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'btn btn-outline';
+                nextBtn.innerHTML = '下一页 <i class="fas fa-chevron-right"></i>';
+                nextBtn.addEventListener('click', () => {
+                    const currentPage = parseInt(pageInfo.textContent.split('/')[0]);
+                    if (currentPage < pdf.numPages) {
+                        renderPage(pdf, currentPage + 1, container);
+                        pageInfo.textContent = `${currentPage + 1}/${pdf.numPages}`;
+                    }
+                });
+                
+                pageControls.appendChild(prevBtn);
+                pageControls.appendChild(pageInfo);
+                pageControls.appendChild(nextBtn);
+                container.appendChild(pageControls);
+            }).catch(err => {
+                showError('加载PDF文件时出错: ' + err.message);
+            });
+        }
+        
+        // 渲染PDF页面
+        function renderPage(pdf, pageNumber, container) {
+            // 清除当前页面
+            const oldCanvas = container.querySelector('canvas');
+            if (oldCanvas) oldCanvas.remove();
+            
+            pdf.getPage(pageNumber).then(page => {
+                const viewport = page.getViewport({ scale: 1.8 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                // 插入到容器顶部
+                container.insertBefore(canvas, container.firstChild);
+                
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                page.render(renderContext);
+            });
+        }
+        
+        // 预览Excel文件
+        function previewExcel(arrayBuffer) {
+            try {
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                
+                // 获取第一个工作表
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // 转换为HTML表格
+                const html = XLSX.utils.sheet_to_html(worksheet);
+                document.getElementById('excel-preview').innerHTML = html;
+            } catch (err) {
+                showError('解析Excel文件时出错: ' + err.message);
+            }
+        }
+        
+        // 预览图片
+        function previewImage(blob) {
+            const url = URL.createObjectURL(blob);
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = '预览图片';
+            document.getElementById('image-preview').appendChild(img);
+        }
+        
+        // 显示Word预览提示
+        function showWordPreview() {
+            document.getElementById('word-preview').style.display = 'block';
+        }
+        
+        // 显示输入区域
+        function showInputSection() {
+            previewSection.style.display = 'none';
+            fileUrlInput.value = '';
+            resetPreview();
+        }
+        
+        // 显示预览区域
+        function showPreviewSection() {
+            previewSection.style.display = 'block';
+        }
+        
+        // 重置预览区域
+        function resetPreview() {
+            document.getElementById('pdf-preview').innerHTML = '';
+            document.getElementById('image-preview').innerHTML = '';
+            document.getElementById('excel-preview').innerHTML = '';
+            document.getElementById('word-preview').style.display = 'none';
+        }
+        
+        // 下载文件
+        function downloadFile() {
+            if (!currentFile || !currentFileUrl) return;
+            
+            // 创建临时下载链接
+            const blob = currentFileType === 'pdf' || currentFileType === 'xlsx' || currentFileType === 'xls' 
+                ? new Blob([currentFile]) 
+                : currentFile;
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName.textContent;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // 显示加载指示器
+        function showLoading() {
+            previewContainer.querySelectorAll('*').forEach(el => {
+                if (el.id !== 'loading') el.style.display = 'none';
+            });
+            loadingIndicator.style.display = 'flex';
+        }
+        
+        // 隐藏加载指示器
+        function hideLoading() {
+            loadingIndicator.style.display = 'none';
+            previewContainer.querySelectorAll('*').forEach(el => {
+                if (el.id !== 'loading') el.style.display = '';
+            });
+        }
+        
+        // 显示错误消息
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 工具函数：从URL获取文件名
+        function getFileNameFromUrl(url) {
+            return url.substring(url.lastIndexOf('/') + 1);
+        }
+        
+        // 工具函数：获取文件扩展名
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+        
+        // 工具函数：设置文件图标
+        function setFileIcon(extension) {
+            const icons = {
+                pdf: 'file-pdf',
+                doc: 'file-word',
+                docx: 'file-word',
+                xlsx: 'file-excel',
+                xls: 'file-excel',
+                jpg: 'file-image',
+                jpeg: 'file-image',
+                png: 'file-image',
+                gif: 'file-image',
+                bmp: 'file-image',
+                webp: 'file-image'
+            };
+            
+            const iconClass = icons[extension] || 'file';
+            fileIcon.innerHTML = `<i class="fas fa-${iconClass}"></i>`;
+        }
+        
+        // 工具函数：格式化文件大小
+        function formatFileSize(bytes) {
+            if (typeof bytes !== 'number') bytes = parseInt(bytes);
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 工具函数：验证URL格式
+        function isValidUrl(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+    </script>
+</body>
+</html>

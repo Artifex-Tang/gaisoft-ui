@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片预览</title>
+</head>
+
+<body>
+    <!--实现图片预览是一个非常常见的需求，特别是在处理文件上传时。这可以让用户在上传图片前先预览图片，提升用户体验。以下是实现图片预览的一个基本示例，使用原生JavaScript-->
+    <input type="file" id="imageInput">
+    <img id="imagePreview" src="" alt="Image preview" style="max-width: 100%; height: auto;">
+    <!--监听 <input type="file">的change 事件，当用户选择文件时获取文件并使用 FileReaderAPl来读取图片内容。最后，将读取到的图片内容设置到<img>的src属性中，实现图片的预览效果。-->
+    <script>
+
+        document.getElementById('imageInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];// 获取文件
+            if (file) {
+                //确保文件差图片
+                if (/^image\//i.test(file.type)) {
+                    previewImage(file);
+                }
+                else {
+                    alert("请选择图片文件!");
+                }
+            }
+        });
+
+
+        //预览图片的功能函数
+        function previewImage(file) {
+            const preview = document.getElementById("imagePreview");
+            const reader = new FileReader();
+
+            reader.onload = function (event) {
+                //文件内容读取常毕后，将其设置为 img 元素的 src，显示图片
+                preview.src = event.target.result;
+            };
+            //读取文件内容，读取完成后会触发load事件
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+
+</html>

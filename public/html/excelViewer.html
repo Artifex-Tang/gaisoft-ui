@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>excel预览</title>
+</head>
+
+<body>
+    <script lang="javascript" src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <input type="file" id="input-excel" />
+    <div id="excelData"></div>
+
+    <script>
+        //对于Excel文件预览，我们可以使用SheetJS库来读取Excel件并将其内容渲染为HTML表格来预览。
+        //首先，您需要引入 SheetJS。同样可以通过CDN引入:
+        document.getElementById('input-excel').addEventListener('change', function (e) {
+            var files = e.target.files;
+            if (files && files[0]) {
+                var file = files[0];
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var data = new Uint8Array(reader.result);
+                    var workbook = XLSX.read(data, { type: 'array' });
+
+                    //假定取第一个 sheet
+                    var sheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[sheetName];
+                    var htmlstr = XLsX.utils.sheet_to_html(worksheet);
+                    document.getElementById('excelData').innerHTML = htmlstr;
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    </script>
+</body>
+
+</html>
