@@ -99,7 +99,7 @@ onMounted(async () => {
 
 <template>
     <div class='root'>
-        <p class="welcomeTxt">欢迎使用,操作百解</p>
+        <p class="welcomeTxt">欢迎使用，智能问答</p>
         <div class="content">
             <div class="historyRecordBox" v-if="historyRecord.length>0">
                 <ul >

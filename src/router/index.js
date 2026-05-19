@@ -100,8 +100,8 @@ export const constantRoutes = [
         "component": () => import('@/views/customApp/assitantSession'),//"customApp/assitantSession",
         // hidden: true,
         "meta": {
-          "title": "操作百解(记录)",
-          "icon": "build",
+          "title": "智能问答(记录)",
+          "icon": "qa",
           "noCache": false,
           "link": null,
           "affix": false
@@ -114,8 +114,8 @@ export const constantRoutes = [
         "component": () => import('@/views/customApp/ops_solutions_chat'),//"customApp/ops_solutions_chat",
         // hidden: true,
         "meta": {
-          "title": "操作百解(对话)",
-          "icon": "build",
+          "title": "智能问答(对话)",
+          "icon": "qa",
           "noCache": false,
           "link": null,
           "affix": false
@@ -128,7 +128,7 @@ export const constantRoutes = [
   //   "name": "kbManager",
   //   "path": "/kbManager",
   //   // component: Layout,
-  //   meta: { title: '手册Manager', icon: 'dashboard', affix: true },
+  //   meta: { title: '知识库Manager', icon: 'dashboard', affix: true },
   //   //"redirect": "index",
   //   "component": () => import('@/views/customApp/kbManager/kbManager.vue'),
   //   "children": [

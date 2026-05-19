@@ -291,7 +291,7 @@ onMounted(async () => {
         </div>
         <div class="rightBox">
             <div class="rightContent" >
-                <div class="topSpace" v-if="answer == null && question == ''">欢迎使用故障溯源</div>
+                <div class="topSpace" v-if="answer == null && question == ''">欢迎使用知识检索</div>
 
                 <div class="searchBox">
                     <el-input class="inputDeep" v-model="question" style="width: 520px" placeholder="请输入您要查询的内容"

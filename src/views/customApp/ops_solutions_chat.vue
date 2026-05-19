@@ -344,7 +344,7 @@ onMounted(async () => {
 
 <template>
     <div class='root'>
-        <p class="welcomeTxt">欢迎使用,操作百解</p>
+        <p class="welcomeTxt">欢迎使用，智能问答</p>
         <div class="chatBox">
             <div class="assistantBox">
                 <p class="assistantName">{{ curentAssistant?.name }}</p><el-icon size="18" @click="closeAssistant()">

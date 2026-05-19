@@ -428,7 +428,7 @@ onMounted(async () => {
 <template>
     <div class='root'>
         <div class="block1" v-if="showBlock == 'block1'">
-            <p class="welcomeTxt">欢迎使用,操作百解</p>
+            <p class="welcomeTxt">欢迎使用，智能问答</p>
             <div class="chatBox">
                 <p class="noticeTxt">您好，请先在下方选择助理为您答疑解惑。</p>
                 <!-- <div class="chatBoxFooter"></div> -->
@@ -484,7 +484,7 @@ onMounted(async () => {
                 </ul>
             </div>
             <div class="chatBox">
-                <p class="welcomeTxt">欢迎使用,操作百解</p>
+                <p class="welcomeTxt">欢迎使用，智能问答</p>
 
                 <div class="chatRecordBox" ref="charMessageBoxRef" v-if="messageList.length>0">
                     <ul>

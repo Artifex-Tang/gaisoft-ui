@@ -5,7 +5,7 @@ const router = useRouter();
 </script>
 
 <template>
-<div class='root'>故障溯源</div>
+<div class='root'>知识检索</div>
 </template>
 
 <style lang="scss" scoped>

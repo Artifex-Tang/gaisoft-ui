@@ -1,4 +1,4 @@
-//操作百解API
+//智能问答API
 import request from "@/utils/request";
 import ragflowReq from "@/utils/ragflowReq";
 import { getToken } from '@/utils/auth'
@@ -50,7 +50,7 @@ export function loadTypesByFileIds(ids) {
   })
 }
 
-//session(操作百解聊天记录）)
+//session(智能问答聊天记录）)
 export function listSession(query) {
   return request({
     url: '/aftersales/session/list',
@@ -133,7 +133,7 @@ export function getAssistant(id) {
 }
 
 
-//获取session（操作百解聊天记录）
+//获取session（智能问答聊天记录）
 export function loadChatSession(
   chat_id,
   page = 1,
@@ -149,7 +149,7 @@ export function loadChatSession(
     method: "get",
   });
 }
-//删除session(操作百解聊天记录）
+//删除session(智能问答聊天记录）
 export function delChatSession(chat_id, ids) {
   let url = `/api/v1/chats/${chat_id}/sessions`;
   return ragflowReq({
@@ -161,7 +161,7 @@ export function delChatSession(chat_id, ids) {
   });
 }
 
-//添加session(操作百解聊天记录）
+//添加session(智能问答聊天记录）
 export function addChatSession(chat_id, sessionName) {
   let url = `/api/v1/chats/${chat_id}/sessions`;
   return ragflowReq({

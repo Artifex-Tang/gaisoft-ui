@@ -13,7 +13,7 @@ let cutPage = (page) => {
         <div class="leftBox">
             <div class="topBox">
                 <img src="/imgs/defaultChatAssistant.png" alt="">
-                <p class="kbName">手册管理</p>
+                <p class="kbName">知识库管理</p>
             </div>
             <div class="bottomBox">
                 <ul>
