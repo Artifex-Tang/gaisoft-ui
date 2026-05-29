@@ -14,6 +14,8 @@ const props = defineProps({
 
 let loading = ref(true)
 let saving = ref(false)
+let chunkCount = ref(0)
+let embeddingModelOptions = ref([])
 
 // ragflow 0.18 chunk_method options
 const chunkMethodOptions = [
@@ -36,6 +38,7 @@ let formObj = ref({
     avatar: "",
     description: "",
     permission: "me",
+    embedding_model: "",
     chunk_method: "naive",
     parser_config: {
         chunk_token_num: 128,
@@ -69,7 +72,9 @@ let loadConfig = async () => {
             formObj.value.avatar = ds.avatar || ""
             formObj.value.description = ds.description || ""
             formObj.value.permission = ds.permission || "me"
+            formObj.value.embedding_model = ds.embedding_model || ""
             formObj.value.chunk_method = ds.chunk_method || "naive"
+            chunkCount.value = ds.chunk_count || 0
             formObj.value.similarity_threshold = ds.similarity_threshold ?? 0.2
             formObj.value.vector_similarity_weight = ds.vector_similarity_weight ?? 0.3
             if (ds.parser_config) {
@@ -103,6 +108,10 @@ let saveConfig = async () => {
             similarity_threshold: formObj.value.similarity_threshold,
             vector_similarity_weight: formObj.value.vector_similarity_weight,
         }
+        // embedding_model can only be changed when chunk_count is 0
+        if (formObj.value.embedding_model && chunkCount.value === 0) {
+            payload.embedding_model = formObj.value.embedding_model
+        }
         if (formObj.value.avatar) {
             payload.avatar = formObj.value.avatar
         }
@@ -124,8 +133,34 @@ let saveConfig = async () => {
     saving.value = false
 }
 
+// load available embedding models from ragflow
+let loadEmbeddingModels = async () => {
+    try {
+        let res = await commonReqRagFlowServer('/v1/llm/my_llms', 'get', null)
+        if (res.code == 0 && res.data) {
+            let models = []
+            for (let factory in res.data) {
+                let llms = res.data[factory].llm || []
+                for (let m of llms) {
+                    if (m.type === 'embedding') {
+                        models.push({
+                            value: `${m.name}___${factory}`,
+                            label: `${m.name} (${factory})`,
+                            factory: factory,
+                        })
+                    }
+                }
+            }
+            embeddingModelOptions.value = models
+        }
+    } catch (e) {
+        console.error('加载嵌入模型列表出错', e)
+    }
+}
+
 onMounted(() => {
     loadConfig()
+    loadEmbeddingModels()
 })
 </script>
 
@@ -153,6 +188,16 @@ onMounted(() => {
                             <Plus />
                         </el-icon>
                     </el-upload>
+                </el-form-item>
+
+                <el-form-item label="嵌入模型" prop="embedding_model" style="width: 90%;">
+                    <el-select v-model="formObj.embedding_model" placeholder="选择嵌入模型" style="width: 300px" :disabled="chunkCount > 0">
+                        <el-option v-for="item in embeddingModelOptions" :key="item.value" :label="item.label"
+                            :value="item.value" />
+                    </el-select>
+                    <span v-if="chunkCount > 0" style="color:#E6A23C;font-size:12px;margin-left:10px;">
+                        已有 {{ chunkCount }} 个分块，不可更改嵌入模型
+                    </span>
                 </el-form-item>
 
                 <el-form-item label="切片方法" prop="chunk_method" style="width: 90%;">
