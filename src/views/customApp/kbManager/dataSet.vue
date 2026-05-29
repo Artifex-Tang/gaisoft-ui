@@ -188,7 +188,7 @@ let parseData = async (obj) => {
     if (obj.run == "1") {
         ElMessage.error('当前文件已解析'); return
     }
-    let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/documents/run?document_ids=${obj.id}&run=1`, 'get', null)
+    let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/documents/${obj.id}`, 'put', JSON.stringify({ "run": 1 }))
     console.log('解析后返回', res)
     if (res.code == 0) {
         loadTableData(1);
@@ -201,7 +201,7 @@ let parseData = async (obj) => {
 let cancelParseData = async (obj) => {
     if (obj.run == "1") {
 
-        let res = await commonReqRagFlowServer('/v1/document/run', 'post', JSON.stringify({ "doc_ids": [obj.id], "run": 2, "delete": false }))
+        let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/documents/${obj.id}`, 'put', JSON.stringify({ "run": 2 }))
         console.log('解析后返回', res)
         if (res.code == 0) {
             loadTableData(1);
