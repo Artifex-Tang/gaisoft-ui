@@ -341,34 +341,37 @@ onUnmounted(() => {
                     </div>
                 </template>
             </el-table-column>
-            <el-table-column fixed="right" label="操作" width="260">
+            <el-table-column fixed="right" label="操作" width="180">
                 <template #default="scope">
-                    <el-tooltip v-if="scope.row.type!='virtual'" content="解析" placement="top">
-                        <el-button v-if="scope.row.run == 'UNSTART' || scope.row.run == 'FAIL' || scope.row.run == 'CANCEL'" size="small" @click="parseData(scope.row)">
-                            <el-icon color="#32BC7B"><VideoPlay /></el-icon>
-                        </el-button>
-                        <el-button v-else-if="scope.row.run == 'RUNNING'" size="small" @click="cancelParseData(scope.row)">
-                            <el-icon color="#F04438"><CircleClose /></el-icon>
-                        </el-button>
-                        <el-button v-else size="small" @click="parseData(scope.row)">
-                            <el-icon color="#17B26A"><Refresh /></el-icon>
-                        </el-button>
-                    </el-tooltip>
-                    <el-tooltip v-if="scope.row.type!='virtual'" content="设置切片方法" placement="top">
-                        <el-button size="small" @click="openSetSliceDialog(scope.row)"><el-icon><Connection /></el-icon></el-button>
-                    </el-tooltip>
-                    <el-tooltip v-if="scope.row.type!='virtual'" content="设置元数据" placement="top">
-                        <el-button size="small" @click="openSetMetaDataDialog(scope.row)"><el-icon><Setting /></el-icon></el-button>
-                    </el-tooltip>
-                    <el-tooltip content="重命名" placement="top">
-                        <el-button size="small" @click="openRemaneFileDialog(scope.row)"><el-icon><EditPen /></el-icon></el-button>
-                    </el-tooltip>
-                    <el-tooltip content="删除" placement="top">
-                        <el-button size="small" @click="deleteFileOrFilder(scope.row)"><el-icon><Delete /></el-icon></el-button>
-                    </el-tooltip>
-                    <el-tooltip v-if="scope.row.type!='virtual'" content="下载" placement="top">
-                        <el-button size="small" @click="downloadFile(scope.row)"><el-icon><Bottom /></el-icon></el-button>
-                    </el-tooltip>
+                    <el-button-group>
+                        <el-tooltip v-if="scope.row.type!='virtual'" content="解析" placement="top">
+                            <el-button v-if="scope.row.run == 'UNSTART' || scope.row.run == 'FAIL' || scope.row.run == 'CANCEL'" size="small" @click="parseData(scope.row)">
+                                <el-icon color="#32BC7B"><VideoPlay /></el-icon>
+                            </el-button>
+                            <el-button v-else-if="scope.row.run == 'RUNNING'" size="small" @click="cancelParseData(scope.row)">
+                                <el-icon color="#F04438"><CircleClose /></el-icon>
+                            </el-button>
+                            <el-button v-else size="small" @click="parseData(scope.row)">
+                                <el-icon color="#17B26A"><Refresh /></el-icon>
+                            </el-button>
+                        </el-tooltip>
+                        <el-tooltip content="重命名" placement="top">
+                            <el-button size="small" @click="openRemaneFileDialog(scope.row)"><el-icon><EditPen /></el-icon></el-button>
+                        </el-tooltip>
+                        <el-tooltip content="删除" placement="top">
+                            <el-button size="small" @click="deleteFileOrFilder(scope.row)"><el-icon><Delete /></el-icon></el-button>
+                        </el-tooltip>
+                        <el-dropdown v-if="scope.row.type!='virtual'" trigger="click">
+                            <el-button size="small"><el-icon><More /></el-icon></el-button>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item @click="openSetSliceDialog(scope.row)">设置切片方法</el-dropdown-item>
+                                    <el-dropdown-item @click="openSetMetaDataDialog(scope.row)">设置元数据</el-dropdown-item>
+                                    <el-dropdown-item @click="downloadFile(scope.row)">下载</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
+                    </el-button-group>
                 </template>
             </el-table-column>
         </el-table>
