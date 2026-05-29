@@ -111,7 +111,7 @@ let kbConfigBoxShow = ref(false)
 let openKbConfigBox = (obj) => {
     console.log("打开知识库配置", obj)
     targetKb.value = obj
-    dialogTableTitle.value = `${obj.name}手册(配置)`
+    dialogTableTitle.value = `${obj.name}知识库(配置)`
     kbConfigBoxShow.value = true
 
 }
@@ -120,7 +120,7 @@ let searchTestBoxShow = ref(false)
 let openSearchTestBox = (obj) => {
     console.log("打开检索测试", obj)
     targetKb.value = obj
-    dialogTableTitle.value = `${obj.name}手册(检索测试)`
+    dialogTableTitle.value = `${obj.name}知识库(检索测试)`
     searchTestBoxShow.value = true
 
 }
@@ -129,7 +129,7 @@ let datasetBoxShow = ref(false)
 let openDatasetBox = (obj) => {
     console.log("数据集", obj)
     targetKb.value = obj
-    dialogTableTitle.value = `${obj.name}手册(数据集)`
+    dialogTableTitle.value = `${obj.name}知识库(数据集)`
     datasetBoxShow.value = true
 
 }
@@ -198,7 +198,7 @@ onMounted(async () => {
                     <p style="color: #0078FF;font-weight: 600;font-size: 20px">{{ dialogTableTitle }}</p>
                 </div>
             </template>
-            <kbConfig></kbConfig>
+            <kbConfig :kb_id="targetKb.id"></kbConfig>
         </el-dialog>
         <!--数据集配置框-->
         <el-dialog v-model="datasetBoxShow" align-center destroy-on-close
@@ -229,7 +229,7 @@ onMounted(async () => {
                 </div>
             </template>
             <el-form label-width="120px">
-                <el-form-item label="手册名称">
+                <el-form-item label="知识库名称">
                     <el-input v-model="newKbName" />
                 </el-form-item>
                 <el-form-item>

@@ -1,111 +1,199 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { useRouter, useRoute } from "vue-router"
 import { commonReqRagFlowServer } from "@/api/app/ops.js";
-import { Delete, Edit, Search, Share, Upload, Refresh } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import common from '@/utils/common.js'
-const router = useRouter();
+
+const props = defineProps({
+    kb_id: {
+        type: String,
+        default: "",
+        required: true
+    }
+})
+
+let loading = ref(true)
+let saving = ref(false)
+
+// ragflow 0.18 chunk_method options
+const chunkMethodOptions = [
+    { value: 'naive', label: '通用' },
+    { value: 'manual', label: '手动' },
+    { value: 'qa', label: 'Q&A' },
+    { value: 'table', label: '表格' },
+    { value: 'paper', label: '论文' },
+    { value: 'book', label: '书籍' },
+    { value: 'laws', label: '法律' },
+    { value: 'presentation', label: '演示文稿' },
+    { value: 'picture', label: '图片' },
+    { value: 'one', label: '整篇' },
+    { value: 'email', label: '邮件' },
+    { value: 'tag', label: '标签' },
+]
 
 let formObj = ref({
     name: "",
     avatar: "",
-    description: '',
-    permission: "team",
-    parser_id: "",//切片方法
-});
-//图片上传处理
+    description: "",
+    permission: "me",
+    chunk_method: "naive",
+    parser_config: {
+        chunk_token_num: 128,
+        delimiter: "\\n!?;。;!？",
+        html4excel: false,
+        layout_recognize: "DeepDOC",
+        raptor: { use_raptor: false },
+        graphrag: { use_graphrag: false },
+        pages: [[1, 1000000]],
+    },
+    similarity_threshold: 0.2,
+    vector_similarity_weight: 0.3,
+})
+
+// image upload
 let handleChange = async (e) => {
     let base64 = await common.file2Base64(e.raw)
-    console.log(base64)
     formObj.value.avatar = base64
 }
-const options = [
-  {
-    label: 'Popular cities',
-    options: [
-      {
-        value: 'Shanghai',
-        label: 'Shanghai',
-      },
-      {
-        value: 'Beijing',
-        label: 'Beijing',
-      },
-    ],
-  },
-  {
-    label: 'City name',
-    options: [
-      {
-        value: 'Chengdu',
-        label: 'Chengdu',
-      },
-      {
-        value: 'Shenzhen',
-        label: 'Shenzhen',
-      },
-      {
-        value: 'Guangzhou',
-        label: 'Guangzhou',
-      },
-      {
-        value: 'Dalian',
-        label: 'Dalian',
-      },
-    ],
-  },
-]
+
+// load dataset config from ragflow
+let loadConfig = async () => {
+    if (!props.kb_id) return
+    loading.value = true
+    try {
+        let res = await commonReqRagFlowServer(`/api/v1/datasets?id=${props.kb_id}`, 'get', null)
+        console.log('加载知识库配置', res)
+        if (res.code == 0 && res.data) {
+            let ds = res.data
+            formObj.value.name = ds.name || ""
+            formObj.value.avatar = ds.avatar || ""
+            formObj.value.description = ds.description || ""
+            formObj.value.permission = ds.permission || "me"
+            formObj.value.chunk_method = ds.chunk_method || "naive"
+            formObj.value.similarity_threshold = ds.similarity_threshold ?? 0.2
+            formObj.value.vector_similarity_weight = ds.vector_similarity_weight ?? 0.3
+            if (ds.parser_config) {
+                formObj.value.parser_config = { ...formObj.value.parser_config, ...ds.parser_config }
+            }
+        } else {
+            ElMessage.error(res.message || '加载配置失败')
+        }
+    } catch (e) {
+        console.error('加载配置出错', e)
+        ElMessage.error('加载配置出错')
+    }
+    loading.value = false
+}
+
+// save config
+let saveConfig = async () => {
+    if (!props.kb_id) return
+    if (!formObj.value.name) {
+        ElMessage.error('知识库名称不能为空')
+        return
+    }
+    saving.value = true
+    try {
+        let payload = {
+            name: formObj.value.name,
+            description: formObj.value.description,
+            permission: formObj.value.permission,
+            chunk_method: formObj.value.chunk_method,
+            parser_config: formObj.value.parser_config,
+            similarity_threshold: formObj.value.similarity_threshold,
+            vector_similarity_weight: formObj.value.vector_similarity_weight,
+        }
+        if (formObj.value.avatar) {
+            payload.avatar = formObj.value.avatar
+        }
+        let res = await commonReqRagFlowServer(
+            `/api/v1/datasets/${props.kb_id}`,
+            'put',
+            JSON.stringify(payload)
+        )
+        console.log('保存配置返回', res)
+        if (res.code == 0) {
+            ElMessage.success('保存成功')
+        } else {
+            ElMessage.error(res.message || '保存失败')
+        }
+    } catch (e) {
+        console.error('保存配置出错', e)
+        ElMessage.error('保存配置出错')
+    }
+    saving.value = false
+}
+
+onMounted(() => {
+    loadConfig()
+})
 </script>
 
 <template>
-    <div class='kbConfigRoot'>
+    <div class='kbConfigRoot' v-loading="loading">
         <div class="topBox">
-            <p class="desTitle">在这里更新您的知识库详细信息，尤其是切片方法。</p>
-            <el-form label-width="120px" status-icon :model="formObj" label-position="left" inline="true"
-                style="display: flex;flex-direction: column;flex-wrap: wrap;">
+            <p class="desTitle">更新知识库配置，尤其是切片方法。</p>
+            <el-form label-width="140px" :model="formObj" label-position="left">
 
-                <el-form-item label="知识库名称" prop="name" style="width: 45%;">
+                <el-form-item label="知识库名称" prop="name" style="width: 90%;">
                     <el-input v-model="formObj.name" />
                 </el-form-item>
-                <el-form-item label="知识库图片" prop="avatar" style="width: 45%;">
+
+                <el-form-item label="描述" prop="description" style="width: 90%;">
+                    <el-input v-model="formObj.description" type="textarea" :rows="3" />
+                </el-form-item>
+
+                <el-form-item label="知识库图片" prop="avatar" style="width: 90%;">
                     <el-upload class="avatar-uploader" action="#" :auto-upload="false" :show-file-list="false"
                         :on-change="handleChange">
                         <img v-if="formObj.avatar" :src="formObj.avatar" class="avatar"
-                            style="width: 80px;height: 80px;object-fit: fill;" />
-                        <!-- <div class="uploadIconBox"> -->
-                        <p v-if="formObj.avatar" style="width: 10px;height: 50px;"></p>
-                        <el-icon class="avatar-uploader-icon" size="100" color="#ccc"
-                            style="border: 1px dashed #ccc;box-sizing:border-box;padding: 20px;">
+                            style="width: 80px;height: 80px;object-fit: fill;border-radius: 8px;" />
+                        <el-icon v-else class="avatar-uploader-icon" size="60" color="#ccc"
+                            style="border: 1px dashed #ccc;box-sizing:border-box;padding: 20px;border-radius: 8px;">
                             <Plus />
                         </el-icon>
-                        <!-- </div> -->
-
                     </el-upload>
                 </el-form-item>
-                <el-form-item label="描述" prop="description" style="width: 45%;">
-                    <el-input v-model="formObj.description" />
-                </el-form-item>
-                <el-form-item label="描述" prop="description" style="width: 45%;">
-                    <el-select v-model="value" class="m-2" placeholder="Select" size="large" style="width: 240px">
-                        <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="PDF解析器" prop="description" style="width: 45%;" title="使用视觉模型进行 PDF 布局分析，以更好地识别文档结构，找到标题、文本块、图像和表格的位置。 如果选择 Naive 选项，则只能获取 PDF 的纯文本。请注意该功能只适用于 PDF 文档，对其他文档不生效。">
-                    <el-select v-model="value" placeholder="Select" style="width: 240px">
-                        <el-option-group v-for="group in options" :key="group.label" :label="group.label">
-                            <el-option v-for="item in group.options" :key="item.value" :label="item.label"  :value="item.value" >
-                               <div class="optionContentBox">
-                                 <img src="http://115.190.23.140/static/zhipu.53c4367a.svg"> <span>{{ item.label }}</span>
-                               </div>
-                            </el-option>
-                        </el-option-group>
+
+                <el-form-item label="切片方法" prop="chunk_method" style="width: 90%;">
+                    <el-select v-model="formObj.chunk_method" placeholder="选择切片方法" style="width: 300px">
+                        <el-option v-for="item in chunkMethodOptions" :key="item.value" :label="item.label"
+                            :value="item.value" />
                     </el-select>
                 </el-form-item>
 
+                <el-form-item label="分块 token 数" prop="parser_config.chunk_token_num" style="width: 90%;">
+                    <el-input-number v-model="formObj.parser_config.chunk_token_num" :min="1" :max="100000" />
+                </el-form-item>
+
+                <el-form-item label="分隔符" prop="parser_config.delimiter" style="width: 90%;">
+                    <el-input v-model="formObj.parser_config.delimiter" />
+                </el-form-item>
+
+                <el-form-item label="布局识别" prop="parser_config.layout_recognize" style="width: 90%;">
+                    <el-select v-model="formObj.parser_config.layout_recognize" style="width: 300px">
+                        <el-option label="DeepDOC" value="DeepDOC" />
+                        <el-option label="开源模型" value="DocLayNet" />
+                        <el-option label="不使用" value="Naive" />
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="相似度阈值" prop="similarity_threshold" style="width: 90%;">
+                    <el-slider v-model="formObj.similarity_threshold" :min="0" :max="1" :step="0.01"
+                        show-input input-size="small" style="width: 300px" />
+                </el-form-item>
+
+                <el-form-item label="向量相似度权重" prop="vector_similarity_weight" style="width: 90%;">
+                    <el-slider v-model="formObj.vector_similarity_weight" :min="0" :max="1" :step="0.01"
+                        show-input input-size="small" style="width: 300px" />
+                </el-form-item>
+
+                <el-form-item style="width: 90%;">
+                    <el-button type="primary" @click="saveConfig" :loading="saving">保存配置</el-button>
+                </el-form-item>
 
             </el-form>
         </div>
-        <div class="bottomBox"></div>
     </div>
 </template>
 
@@ -114,25 +202,17 @@ const options = [
     color: #000;
     width: 100%;
     height: calc(90vh - 100px);
-    display: flex;
-    flex-direction: column;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 20px 50px;
 
     .topBox {
-        height: 70%;
         width: 100%;
 
         .desTitle {
             font-weight: 600;
+            margin-bottom: 20px;
         }
-
-        .formItemBox {
-            width: 48%;
-        }
-    }
-
-    .bottomBox {
-        height: 30%;
-        width: 100%;
     }
 }
 </style>

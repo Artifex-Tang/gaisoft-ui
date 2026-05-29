@@ -327,6 +327,7 @@ onMounted(async () => {
             <el-button type="primary" :icon="Setting" @click="defaultModelShow = true">设置默认模型</el-button>
         </header>
         <!--已添加的模型-->
+        <div class="scrollArea">
         <div class="addModelBox">
             <el-collapse accordion v-model="addModelBoxActivenName">
                 <el-collapse-item name="1" title="asas">
@@ -404,6 +405,7 @@ onMounted(async () => {
                     </div>
                 </el-collapse-item>
             </el-collapse>
+        </div>
         </div>
 
         <!--默认模型弹窗-->
@@ -553,19 +555,23 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .root {
-    min-width: 1560px;
     font-family: "Microsoft YaHei", sans-serif;
     padding: 0;
     margin: 0;
     width: 100%;
     height: calc(100vh - 84px);
     box-sizing: border-box;
-    padding: 20px 40px;
-    overflow-y: scroll;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 
     header {
         display: flex;
         align-items: center;
+        flex-shrink: 0;
+        flex-wrap: nowrap;
+        padding: 15px 20px;
+        gap: 12px;
 
         .title {
             font-size: 16px;
@@ -573,16 +579,22 @@ onMounted(async () => {
         }
 
         .des {
-            margin-left: 30px;
             color: #999999;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .space {
             height: 100%;
             flex: 1;
         }
+    }
+
+    .scrollArea {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 20px 20px 20px;
     }
 
     .addModelBox {
@@ -597,21 +609,25 @@ onMounted(async () => {
             width: 100%;
             display: flex;
             flex-wrap: wrap;
+            gap: 16px;
             box-sizing: border-box;
 
             .modelItemBox {
                 box-sizing: border-box;
-                width: 49%;
-                height: 150px;
+                width: 100%;
+                min-width: 0;
+                height: auto;
+                min-height: 120px;
                 background-color: #F0F1F5;
                 border-radius: 10px;
-                margin-left: 2%;
-                margin-top: 20px;
+                margin-top: 0;
                 display: flex;
                 align-items: center;
+                padding: 10px;
 
                 .llmImgBox {
-                    width: 120px;
+                    width: 80px;
+                    min-width: 80px;
                     height: 100%;
                     overflow: hidden;
                     display: flex;
@@ -621,8 +637,8 @@ onMounted(async () => {
                     .llmImg {
                         display: block;
                         width: auto;
-                        max-width: 70px;
-                        max-height: 100px;
+                        max-width: 60px;
+                        max-height: 80px;
                     }
                 }
 
@@ -631,27 +647,32 @@ onMounted(async () => {
                     flex: 1;
                     height: 100%;
                     box-sizing: border-box;
-                    padding: 14px;
+                    padding: 8px;
                     padding-left: 0px;
 
                     .topBox {
                         display: flex;
-                        align-items: flex-start;
-                        height: 32px;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                        height: auto;
 
                         .llmName {
-                            font-size: 16px;
-                            width: 340px;
+                            font-size: 14px;
+                            max-width: 160px;
                             color: #000;
                             font-weight: 600;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
                         }
 
                     }
 
                     .desTxt {
                         color: #000;
-                        line-height: 44px;
-                        font-size: 16px;
+                        line-height: 28px;
+                        font-size: 12px;
                         font-weight: 600;
                         overflow: hidden;
                         text-overflow: ellipsis;
@@ -663,15 +684,13 @@ onMounted(async () => {
                         display: flex;
                         align-items: center;
                         flex-wrap: wrap;
-                        height: 34px;
+                        gap: 6px;
                         overflow: hidden;
 
                         .item {
-                            height: 100%;
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            margin-left: 10px;
 
                             .llmInfo {
                                 height: 100%;
@@ -711,21 +730,11 @@ onMounted(async () => {
                                 }
                             }
                         }
-
-                        .item:nth-child(1) {
-                            margin-left: 0;
-                        }
                     }
                 }
             }
 
-            .modelItemBox:nth-child(1),
-            .modelItemBox:nth-child(2) {
-                margin-top: 0px;
-            }
-
             .modelItemBox:nth-child(2n+1) {
-                margin-left: 0%;
             }
         }
 
