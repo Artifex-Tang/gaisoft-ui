@@ -198,7 +198,7 @@ let showAllSmallModel = (obj) => {//展示全部小模型
 
 
 //*************************************************************************待添加的模型
-let sortList=['Ollama','Xinference','VLLM','OpenAI']
+let mappedFactories = modelObjMap.map(o => o.llm_factory)
 let bigModelFormRef = ref(null)
 let modelToBeAddedList = ref([])
 let loadModelToBeAddedList = async () => {
@@ -232,8 +232,8 @@ let loadModelToBeAddedList = async () => {
         //         return -1
         //     }
         // })
-        //根据sortList过滤数据
-        tempPackage = tempPackage.filter(o => sortList.includes(o.name))
+        //只显示有表单映射的供应商
+        tempPackage = tempPackage.filter(o => mappedFactories.includes(o.name))
 
         modelToBeAddedList.value = tempPackage.filter(o=>!tempModelNameArr.includes(o.name))
          console.log('待添加的模型', modelToBeAddedList.value)

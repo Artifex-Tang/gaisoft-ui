@@ -141,17 +141,12 @@ let converseWithChatAssistant = async () => {
     scrollToBottom()
     searchRequestiing.value = true
 
-    //开始请求数据
+    // ragflow 0.18.0: POST /api/v1/chats/{chat_id}/completions
     common.streamModelResponse({
-        "url": '/v1/conversation/completion',
-        "conversation_id": sessionId,
-        "messages": [
-            {
-                "content": searchInput.value,
-                "id": "",
-                "role": "user"
-            }
-        ]
+        "url": `/api/v1/chats/${chat_id}/completions`,
+        "question": searchInput.value,
+        "session_id": sessionId,
+        "stream": true
     }, (msg) => {
         // msg=msg.replace('data:{"code": 0, "message": "", "data": true}', '').substring(5)
         if (msg != "") {

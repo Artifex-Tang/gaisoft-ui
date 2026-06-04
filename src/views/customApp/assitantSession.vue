@@ -66,22 +66,28 @@ let searchHandler = async () => {
         return false
     }
 
+    // 先在ragflow创建session
+    let ragflowSessionId = ""
+    try {
+        let ragflowSession = await commonReqRagFlowServer(`/api/v1/chats/${curentAssistant.value.id}/sessions`, 'post', JSON.stringify({}))
+        if (ragflowSession.code == 0 && ragflowSession.data) {
+            ragflowSessionId = ragflowSession.data.id
+        }
+    } catch (e) {
+        console.warn('创建ragflow session失败', e)
+    }
+
+    let sessionId = ragflowSessionId || common.randomStr()
     let res = await addSession({
-        //sessionid:"",
         sessionName: searchInput.value,
         chatId: curentAssistant.value.id,
-        sessionId: common.randomStr()
-        // create_date:"",
-        // create_time:"",
-        // update_date:"",
-        // update_tiem:"",
-        //user_id:"",
+        sessionId: sessionId
     })
     console.log('提交问题后返回', res);
     if (res.code == 200) {
         localStorage.setItem('curentQuestionStr', searchInput.value);
         searchInput.value = ""
-        let urlObj = { path: "/assistant/ops_solutions_chat", query: { chat_id: res.data.chatId, sessionId: res.data.sessionId } };
+        let urlObj = { path: "/assistant/ops_solutions_chat", query: { chat_id: res.data.chatId, sessionId: sessionId } };
         tab.closeOpenPage(urlObj)
     }
     else {

@@ -214,9 +214,9 @@ answerStr=answerStr.replaceAll('begin_search_query|>','').replaceAll('<|end_sear
         }
     },
 
-    // 处理 SSE 格式数据
+    // 处理 SSE 格式数据 — ragflow 0.18.0 compatible
     processCustomStream: (buffer, onMessage) => {
-        const events = buffer.split('\n\n'); // 使用双换行符分割事件
+        const events = buffer.split('\n\n');
 
         // 保留未完成的事件（最后部分）
         let remaining = events.pop() || '';
@@ -233,13 +233,19 @@ answerStr=answerStr.replaceAll('begin_search_query|>','').replaceAll('<|end_sear
                 const jsonStr = trimmedEvent.slice(jsonStart);
                 const data = JSON.parse(jsonStr);
 
-                // 处理两种类型的数据
-                if (data.data === true) {
-                    // 最终结束标志
-                    onMessage?.('', true);
-                } else if (data.data?.answer) {
-                    // 普通消息内容
-                    onMessage?.(data.data);
+                // ragflow 0.18.0 streaming format:
+                // Content: {"code":0, "data":{"answer":"text","reference":{}}}
+                // End: {"code":0, "data":true} or {"code":0, "data":{"answer":""}}
+                if (data.code === 0) {
+                    if (data.data === true) {
+                        onMessage?.('', true);
+                    } else if (data.data && typeof data.data === 'object' && data.data.answer !== undefined) {
+                        if (data.data.answer !== '') {
+                            onMessage?.(data.data);
+                        }
+                    }
+                } else if (data.code && data.code !== 0) {
+                    console.warn('ragflow error:', data.message);
                 }
             } catch (e) {
                 console.warn('解析JSON失败:', e, '数据:', trimmedEvent);

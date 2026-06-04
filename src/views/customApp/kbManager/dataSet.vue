@@ -164,12 +164,12 @@ let setMetaDataProcess = async () => {
     }
 }
 
-// parse document
+// parse document — ragflow 0.18.0: POST /datasets/{id}/chunks with document_ids
 let parseData = async (obj) => {
     if (obj.run == "RUNNING") {
         ElMessage.error('当前文件正在解析中'); return
     }
-    let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/documents/${obj.id}`, 'put', JSON.stringify({ "run": 1 }))
+    let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/chunks`, 'post', JSON.stringify({ "document_ids": [obj.id] }))
     if (res.code == 0) {
         ElMessage.success('开始解析')
         loadTableData(1);
@@ -178,12 +178,12 @@ let parseData = async (obj) => {
     }
 }
 
-// cancel parse
+// cancel parse — ragflow 0.18.0: DELETE /datasets/{id}/chunks with document_ids
 let cancelParseData = async (obj) => {
     if (obj.run != "RUNNING") {
         ElMessage.error('当前文件未在解析中'); return
     }
-    let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/documents/${obj.id}`, 'put', JSON.stringify({ "run": 2 }))
+    let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/chunks`, 'delete', JSON.stringify({ "document_ids": [obj.id] }))
     if (res.code == 0) {
         ElMessage.success('已取消解析')
         loadTableData(1);
