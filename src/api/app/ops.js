@@ -1,9 +1,8 @@
 //智能问答API
 import request from "@/utils/request";
-import ragflowReq from "@/utils/ragflowReq";
 import { getToken } from '@/utils/auth'
 
-//通用请求ragFlow方法
+//通用请求ragFlow方法（经 gaisoft-server 代理，统一 API Key 认证）
 export function commonReqRagFlowServer(url,method,params){
    return request({
       url: '/ragflow/common',
@@ -13,7 +12,7 @@ export function commonReqRagFlowServer(url,method,params){
         params:params,
         method:method
       }
-    }) 
+    })
 }
 //
 export function requestStream(params){
@@ -118,18 +117,10 @@ export function getAssistants(
   orderby = "create_time",
   desc = true
 ) {
-  let url = `/api/v1/chats?page=${page}&page_size=${page_size}&orderby=${orderby}&desc=${desc}&name=${name}`;
-  return ragflowReq({
-    url: url,
-    method: "get",
-  });
+  return commonReqRagFlowServer(`/api/v1/chats?page=${page}&page_size=${page_size}&orderby=${orderby}&desc=${desc}&name=${name}`, "get", null);
 }
 export function getAssistant(id) {
-   let url = `/api/v1/chats?id=${id}`;
-  return ragflowReq({
-    url: url,
-    method: "get",
-  });
+  return commonReqRagFlowServer(`/api/v1/chats?id=${id}`, "get", null);
 }
 
 
@@ -143,77 +134,29 @@ export function loadChatSession(
   session_name = "",
   session_id = ""
 ) {
-  let url = `/api/v1/chats/${chat_id}/sessions?page=${page}&page_size=${page_size}&orderby=${orderby}&desc=${desc}&name=${session_name}&id=${session_id}`;
-  return ragflowReq({
-    url: url,
-    method: "get",
-  });
+  return commonReqRagFlowServer(`/api/v1/chats/${chat_id}/sessions?page=${page}&page_size=${page_size}&orderby=${orderby}&desc=${desc}&name=${session_name}&id=${session_id}`, "get", null);
 }
 //删除session(智能问答聊天记录）
 export function delChatSession(chat_id, ids) {
-  let url = `/api/v1/chats/${chat_id}/sessions`;
-  return ragflowReq({
-    url: url,
-    method: "delete",
-    data: {
-      ids: ids,
-    },
-  });
+  return commonReqRagFlowServer(`/api/v1/chats/${chat_id}/sessions`, "delete", JSON.stringify({ids: ids}));
 }
 
 //添加session(智能问答聊天记录）
 export function addChatSession(chat_id, sessionName) {
-  let url = `/api/v1/chats/${chat_id}/sessions`;
-  return ragflowReq({
-    url: url,
-    method: "post",
-    data: {
-      name: sessionName,
-    },
-  });
+  return commonReqRagFlowServer(`/api/v1/chats/${chat_id}/sessions`, "post", JSON.stringify({name: sessionName}));
 }
 
 //与assistant 发起对话
 export function chat(chat_id, question, session_id, stream = true) {
-  let url = `/api/v1/chats/${chat_id}/completions`;
-  return ragflowReq({
-    url: url,
-    method: "post",
-    data: {
-      question: question,
-      session_id: session_id,
-      stream: stream,
-    },
-  });
-}
-
-export async function chat2(chat_id, question, session_id, stream = true) {
-  let endpoint = `http://115.190.23.140/api/v1/chats/${chat_id}/completions`;
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer IyZDQ4ZmFhNTMxNjExZjBiZDM0MDI0Mm`,
-  };
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: headers,
-    body: JSON.stringify({
-      question: question,
-      session_id: session_id,
-      stream: stream,
-    }),
-  });
-
-  let resContent="";
-
- 
+  return commonReqRagFlowServer(`/api/v1/chats/${chat_id}/completions`, "post", JSON.stringify({
+    question: question,
+    session_id: session_id,
+    stream: stream,
+  }));
 }
 
 //获取知识库
 export async function loadDataset(page=1,page_size=999,orderby="create_time ",desc=true){
-  let url = `/api/v1/datasets?page=${page}&page_size=${page_size}&orderby=${orderby}&desc=${desc}`;
-  return ragflowReq({
-    url: url,
-    method: "get",
-  });
+  return commonReqRagFlowServer(`/api/v1/datasets?page=${page}&page_size=${page_size}&orderby=${orderby}&desc=${desc}`, "get", null);
 }
 
