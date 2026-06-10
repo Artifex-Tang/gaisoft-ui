@@ -414,7 +414,7 @@ onMounted(async () => {
     <div class='fileConfigRoot'>
         <header>
             <div class="headerLine">
-                <el-input v-model="queryParams.keyWords" placeholder="请输入" clearable style="width: 200px;" />
+                <el-input v-model="queryParams.keywords" placeholder="请输入" clearable style="width: 200px;" @keyup.enter="loadTableData(1)" />
                 <el-button style="margin-left: 20px;" type="primary" icon="Search"
                     @click="loadTableData(1)">搜索</el-button>
                 <!-- <el-button style="" type="danger" :icon="Delete">删除</el-button> -->

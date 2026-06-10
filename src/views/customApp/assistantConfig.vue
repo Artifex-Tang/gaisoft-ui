@@ -27,7 +27,8 @@ let loadKbList = async () => {
     let res = await commonReqRagFlowServer("/api/v1/datasets", "get", null);
     console.log('加载知识库', res)
     if (res.code == 0) {
-        kbList.value = res.data
+        // ragflow 0.18.0 returns array directly
+        kbList.value = Array.isArray(res.data) ? res.data : (res.data?.kbs || [])
     }
     else {
         ElMessage({ message: res.message, type: 'error', duration: 3 * 1000 })
@@ -36,20 +37,54 @@ let loadKbList = async () => {
 
 
 let defaultChatModelOptions = ref([])
+let rerankModelOptions = ref([])
 let loadAddModelList = async () => {
-    let res = await commonReqRagFlowServer("/v1/llm/my_llms", "get", null);
-    console.log('加载已添加的模型', res)
-    if (res.code == 0) {
+    try {
+        // Try new backend endpoint first (queries ragflow DB directly)
+        let res = await commonReqRagFlowServer("/ragflow/model/list", "get", null);
+        console.log('加载模型(DB直查)', res)
+        if (res.code != 200 || !res.data) {
+            throw new Error('DB endpoint failed');
+        }
         let data = res.data
         let temp = []
+        let rerankTemp = []
         for (let key in data) {
-            temp.push({ label: key, options: data[key].llm.map(item => { return { label: item.name, value: item.name, logo: `/imgs/modelLogo/${key}.svg` } }) })
+            let llms = data[key].llm || []
+            temp.push({ label: key, options: llms.map(item => { return { label: item.name, value: item.name, logo: `/imgs/modelLogo/${key}.svg`, type: item.type } }) })
+            for (let m of llms) {
+                if (m.type === 'rerank') {
+                    rerankTemp.push({ label: `${m.name} (${key})`, value: m.name })
+                }
+            }
         }
-        console.log('temp', temp)
         defaultChatModelOptions.value = temp
-    }
-    else {
-        ElMessage({ message: res.message, type: 'error', duration: 3 * 1000 })
+        rerankModelOptions.value = rerankTemp
+        console.log('模型列表(DB)', temp.length, 'factories, rerank:', rerankTemp.length)
+    } catch (e) {
+        // Fallback to ragflow internal API
+        console.log('DB直查失败, 回退到ragflow API:', e.message)
+        let res = await commonReqRagFlowServer("/v1/llm/my_llms", "get", null);
+        console.log('加载已添加的模型(API)', res)
+        if (res.code == 0) {
+            let data = res.data
+            let temp = []
+            let rerankTemp = []
+            for (let key in data) {
+                let llms = data[key].llm || []
+                temp.push({ label: key, options: llms.map(item => { return { label: item.name, value: item.name, logo: `/imgs/modelLogo/${key}.svg`, type: item.type } }) })
+                for (let m of llms) {
+                    if (m.type === 'rerank') {
+                        rerankTemp.push({ label: `${m.name} (${key})`, value: m.name })
+                    }
+                }
+            }
+            defaultChatModelOptions.value = temp
+            rerankModelOptions.value = rerankTemp
+        }
+        else {
+            ElMessage({ message: '加载模型列表失败: ' + (res.message || res.msg || ''), type: 'error', duration: 3 * 1000 })
+        }
     }
 }
 
@@ -64,8 +99,11 @@ let loadAssistants = async (page = 1, size = 9999, name = "") => {
     if (res.code == 0) {
         let data = res.data
         for (let item of data) {
-            if (item.icon == "") {//无头像
+            // ragflow 0.18.0 uses 'avatar', fallback to 'icon'
+            if (!item.avatar && !item.icon) {
                 item.icon = defaultAssistantIcon
+            } else {
+                item.icon = item.avatar || item.icon
             }
         }
         tableData.value = data
@@ -119,30 +157,134 @@ let dialogForm = ref({
     "top_n": 8,
     "vector_similarity_weight": 0.0
 })
+// ragflow 0.18.0 API <-> form format converters
+const ragflowToForm = (data) => {
+    // Convert ragflow 0.18.0 chat assistant response to form format
+    return {
+        id: data.id || "",
+        name: data.name || "",
+        description: data.description || "",
+        icon: data.avatar || data.icon || "",
+        do_refer: data.do_refer || "1",
+        language: data.language || "",
+        llm_id: data.llm?.model_name || "",
+        llm_setting: {
+            temperature: data.llm?.temperature ?? 0.1,
+            top_p: data.llm?.top_p ?? 0.3,
+            presence_penalty: data.llm?.presence_penalty ?? 0.4,
+            frequency_penalty: data.llm?.frequency_penalty ?? 0.7,
+        },
+        kb_ids: (data.datasets || []).map(d => d.id || d),
+        rerank_id: data.prompt?.rerank_model || "",
+        similarity_threshold: data.prompt?.similarity_threshold ?? 0.2,
+        vector_similarity_weight: data.prompt?.keywords_similarity_weight ?? 0.7,
+        top_n: data.prompt?.top_n ?? 6,
+        prompt_config: {
+            system: data.prompt?.prompt || "",
+            prologue: data.prompt?.opener || "",
+            empty_response: data.prompt?.empty_response || "",
+            quote: data.prompt?.show_quote ?? true,
+            keyword: data.prompt?.keywords ?? false,
+            refine_multiturn: data.prompt?.refine_multiturn ?? false,
+            tts: data.prompt?.tts ?? false,
+            reasoning: data.prompt?.reasoning ?? false,
+            use_kg: data.prompt?.use_kg ?? false,
+            cross_languages: data.prompt?.cross_languages || [],
+            tavily_api_key: "",
+            parameters: data.prompt?.variables || [{ key: "knowledge", optional: false }],
+        },
+    }
+}
+
+const formToRagflow = (form) => {
+    // Convert form format to ragflow 0.18.0 API format
+    let payload = {
+        name: form.name,
+        description: form.description,
+        avatar: form.icon,
+        do_refer: form.do_refer,
+        language: form.language || "Chinese",
+        llm: {
+            model_name: form.llm_id,
+            temperature: form.llm_setting.temperature,
+            top_p: form.llm_setting.top_p,
+            presence_penalty: form.llm_setting.presence_penalty,
+            frequency_penalty: form.llm_setting.frequency_penalty,
+            max_tokens: 512,
+        },
+        datasets: form.kb_ids,
+        prompt: {
+            prompt: form.prompt_config.system,
+            opener: form.prompt_config.prologue,
+            empty_response: form.prompt_config.empty_response,
+            show_quote: form.prompt_config.quote,
+            keywords: form.prompt_config.keyword,
+            refine_multiturn: form.prompt_config.refine_multiturn,
+            tts: form.prompt_config.tts,
+            reasoning: form.prompt_config.reasoning,
+            use_kg: form.prompt_config.use_kg,
+            rerank_model: form.rerank_id || "",
+            similarity_threshold: form.similarity_threshold,
+            keywords_similarity_weight: form.vector_similarity_weight,
+            top_n: form.top_n,
+            variables: form.prompt_config.parameters,
+            cross_languages: form.prompt_config.cross_languages || [],
+        },
+    }
+    return payload
+}
+
 //打开弹出框
 const openDialogBox = async (data = null) => {
     console.log('弹出配置框', data)
     if (data == null) {
         dialogTitle.value = '新增助理信息'
-        //dialogForm.value = {}
+        // Reset form to default
+        dialogForm.value = {
+            "description": "A helpful dialog",
+            "do_refer": "1",
+            "icon": "",
+            "id": "",
+            "kb_ids": [],
+            "language": "Chinese",
+            "llm_id": "",
+            "llm_setting": {
+                "frequency_penalty": 0.7,
+                "presence_penalty": 0.4,
+                "temperature": 0.1,
+                "top_p": 0.3
+            },
+            "name": "",
+            "prompt_config": {
+                "empty_response": "",
+                "keyword": false,
+                "cross_languages": [],
+                "tavily_api_key": "",
+                "parameters": [{
+                    "key": "knowledge",
+                    "optional": false
+                }],
+                "prologue": "你好！ 我是你的助理，有什么可以帮到你的吗？",
+                "quote": true,
+                "reasoning": false,
+                "refine_multiturn": false,
+                "system": '你是一个智能助手，请总结知识库的内容来回答问题，请列举知识库中的数据详细回答。当所有知识库内容都与问题无关时，你的回答必须包括"知识库中未找到您要的答案！"这句话。回答需要考虑聊天历史。\n        以下是知识库：\n        {knowledge}\n        以上是知识库。',
+                "tts": false,
+                "use_kg": false
+            },
+            "rerank_id": "",
+            "similarity_threshold": 0.2,
+            "top_n": 6,
+            "vector_similarity_weight": 0.7
+        }
         dialogVisible.value = true
     }
     else {
         dialogTitle.value = '编辑助理信息'
-        data['dialog_id']=data.id
-        dialogForm.value = data
-        if (dialogForm.value.prompt_config?.tavily_api_key) {
-            dialogForm.value.prompt_config['tavily_api_key'] = ''
-        }
-        if (dialogForm.value.prompt_config.cross_languages) {
-            dialogForm.value.prompt_config.cross_languages = []
-        }
+        // Convert ragflow 0.18.0 format to form format
+        dialogForm.value = ragflowToForm(data)
         dialogVisible.value = true
-
-        //dialogForm.value=data
     }
-
-
 }
 //提交弹出框数据
 const submitForm = async () => {
@@ -163,7 +305,9 @@ const submitForm = async () => {
     const isUpdate = !!dialogForm.value.id;
     const chatUrl = isUpdate ? `/api/v1/chats/${dialogForm.value.id}` : "/api/v1/chats";
     const chatMethod = isUpdate ? "put" : "post";
-    let res = await commonReqRagFlowServer(chatUrl, chatMethod, JSON.stringify(dialogForm.value));
+    // Convert form to ragflow 0.18.0 API format
+    const payload = formToRagflow(dialogForm.value);
+    let res = await commonReqRagFlowServer(chatUrl, chatMethod, JSON.stringify(payload));
     console.log('提交数据后返回', res)
     if (res.code == 0) {
         ElMessage.success('提交成功')
@@ -353,7 +497,7 @@ onMounted(async () => {
             </el-table>
         </div>
         <!-- 弹出的编辑或者添加助理的表单 -->
-        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="50%" :before-close="handleClose"
+        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="50%"
             style="box-sizing: border-box;padding: 10px 20px;">
 
             <el-form :model="dialogForm" label-width="150px" ref="dialogFormRef" :rules="rules">
@@ -401,7 +545,7 @@ onMounted(async () => {
                             <el-input v-model="dialogForm.prompt_config.tavily_api_key" type="password" show-password />
                         </el-form-item>
                         <el-form-item label="知识库" title="选择关联的知识库。新建或空知识库不会在下拉菜单中显示。">
-                            <el-select v-model="dialogForm.kb_ids" multiple filterable allow-create default-first-option
+                            <el-select v-model="dialogForm.kb_ids" multiple filterable default-first-option
                                 :reserve-keyword="false" placeholder="选择知识库">
                                 <el-option v-for="item in kbList" :key="item.id" :label="item.name" :value="item.id" />
                             </el-select>
@@ -443,9 +587,9 @@ onMounted(async () => {
                         <el-form-item label="Rerank模型"
                             title="非必选项：若不选择 rerank 模型，系统将默认采用关键词相似度与向量余弦相似度相结合的混合查询方式；如果设置了 rerank 模型，则混合查询中的向量相似度部分将被 rerank 打分替代。请注意：采用 rerank 模型会非常耗时">
                             <el-select v-model="dialogForm.rerank_id" filterable allow-create default-first-option
-                                :reserve-keyword="false" placeholder="Rerank模型">
-                                <!-- <el-option v-for="item in kbList" :key="item.id" :label="item.name"
-                                    :value="item.id" /> -->
+                                :reserve-keyword="false" placeholder="Rerank模型" clearable>
+                                <el-option v-for="item in rerankModelOptions" :key="item.value" :label="item.label"
+                                    :value="item.value" />
                             </el-select>
                         </el-form-item>
                         <el-form-item label="跨语言搜索" title="选择一种或多种语言进行跨语言搜索。如果未选择任何语言，系统将使用原始查询进行搜索。">

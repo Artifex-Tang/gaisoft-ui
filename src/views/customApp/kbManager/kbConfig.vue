@@ -136,13 +136,15 @@ let saveConfig = async () => {
 // load available embedding models from ragflow
 let loadEmbeddingModels = async () => {
     try {
-        let res = await commonReqRagFlowServer('/v1/llm/my_llms', 'get', null)
-        if (res.code == 0 && res.data) {
+        // Try new backend endpoint first (queries ragflow DB directly)
+        let res = await commonReqRagFlowServer("/ragflow/model/list", "get", null)
+        if (res.code == 200 && res.data) {
             let models = []
             for (let factory in res.data) {
                 let llms = res.data[factory].llm || []
                 for (let m of llms) {
-                    if (m.type === 'embedding') {
+                    let mType = (m.type || '').toLowerCase()
+                    if (mType === 'embedding' || mType === 'embd') {
                         models.push({
                             value: `${m.name}___${factory}`,
                             label: `${m.name} (${factory})`,
@@ -152,6 +154,50 @@ let loadEmbeddingModels = async () => {
                 }
             }
             embeddingModelOptions.value = models
+            console.log('嵌入模型列表(DB)', models.length)
+            return
+        }
+    } catch (e) {
+        console.log('DB直查失败, 回退:', e.message)
+    }
+    // Fallback to ragflow internal API
+    try {
+        let res = await commonReqRagFlowServer('/v1/llm/my_llms', 'get', null)
+        if (res.code == 0 && res.data) {
+            let models = []
+            let data = res.data
+            if (Array.isArray(data)) {
+                for (let item of data) {
+                    if (item.llm) {
+                        for (let m of (item.llm || [])) {
+                            let mType = (m.type || '').toLowerCase()
+                            if (mType === 'embedding' || mType === 'embd') {
+                                models.push({
+                                    value: m.name || m.model_name,
+                                    label: `${m.name || m.model_name}`,
+                                    factory: item.factory || '',
+                                })
+                            }
+                        }
+                    }
+                }
+            } else {
+                for (let factory in data) {
+                    let llms = data[factory].llm || []
+                    for (let m of llms) {
+                        let mType = (m.type || '').toLowerCase()
+                        if (mType === 'embedding' || mType === 'embd') {
+                            models.push({
+                                value: `${m.name}___${factory}`,
+                                label: `${m.name} (${factory})`,
+                                factory: factory,
+                            })
+                        }
+                    }
+                }
+            }
+            embeddingModelOptions.value = models
+            console.log('嵌入模型列表(API)', models.length)
         }
     } catch (e) {
         console.error('加载嵌入模型列表出错', e)

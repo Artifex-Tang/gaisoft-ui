@@ -224,7 +224,8 @@ let createFolderProcess = async () => {
     if (!newFolderName.value) {
         ElMessage.error('文件夹名称不能为空'); return
     }
-    let res = await commonReqRagFlowServer('/v1/document/create', 'post', JSON.stringify({ "kb_id": props.kb_id, "name": newFolderName.value }))
+    // ragflow 0.18.0: create virtual document (folder) in dataset
+    let res = await commonReqRagFlowServer(`/api/v1/datasets/${props.kb_id}/documents`, 'post', JSON.stringify({ "name": newFolderName.value, "type": "virtual" }))
     if (res.code == 0) {
         newFolderName.value = ''
         createFolderDialogVisible.value = false
