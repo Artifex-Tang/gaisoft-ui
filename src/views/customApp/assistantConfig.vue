@@ -2,6 +2,7 @@
 import { ElNotification, ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 import { ref, onMounted, reactive } from "vue";
 import { commonReqRagFlowServer } from "@/api/app/ops.js";
+import request from "@/utils/request";
 import { useRouter, useRoute } from "vue-router"
 import { Delete, Edit, Search, Share, Upload, Refresh } from '@element-plus/icons-vue'
 import common from '@/utils/common.js'
@@ -40,8 +41,8 @@ let defaultChatModelOptions = ref([])
 let rerankModelOptions = ref([])
 let loadAddModelList = async () => {
     try {
-        // Try new backend endpoint first (queries ragflow DB directly)
-        let res = await commonReqRagFlowServer("/ragflow/model/list", "get", null);
+        // Call gaisoft backend directly (queries ragflow DB, not through ragflow proxy)
+        let res = await request({ url: '/ragflow/model/list', method: 'get' });
         console.log('加载模型(DB直查)', res)
         if (res.code != 200 || !res.data) {
             throw new Error('DB endpoint failed');
@@ -62,7 +63,7 @@ let loadAddModelList = async () => {
         rerankModelOptions.value = rerankTemp
         console.log('模型列表(DB)', temp.length, 'factories, rerank:', rerankTemp.length)
     } catch (e) {
-        // Fallback to ragflow internal API
+        // Fallback to ragflow internal API via proxy
         console.log('DB直查失败, 回退到ragflow API:', e.message)
         let res = await commonReqRagFlowServer("/v1/llm/my_llms", "get", null);
         console.log('加载已添加的模型(API)', res)
@@ -167,7 +168,7 @@ const ragflowToForm = (data) => {
         icon: data.avatar || data.icon || "",
         do_refer: data.do_refer || "1",
         language: data.language || "",
-        llm_id: data.llm?.model_name || "",
+        llm_id: (data.llm?.model_name || "").replace(/@[^@]+$/, ""),
         llm_setting: {
             temperature: data.llm?.temperature ?? 0.1,
             top_p: data.llm?.top_p ?? 0.3,
@@ -212,7 +213,8 @@ const formToRagflow = (form) => {
             frequency_penalty: form.llm_setting.frequency_penalty,
             max_tokens: 512,
         },
-        datasets: form.kb_ids,
+        datasets: form.kb_ids,  // ragflow 0.18.0 accepts both 'datasets' and 'dataset_ids' for backward compat
+        dataset_ids: form.kb_ids,
         prompt: {
             prompt: form.prompt_config.system,
             opener: form.prompt_config.prologue,
@@ -684,6 +686,7 @@ onMounted(async () => {
 .root {
     width: 100%;
     height: calc(100vh - 84px);
+    overflow-y: auto;
     box-sizing: border-box;
     padding: 20px 10px;
 

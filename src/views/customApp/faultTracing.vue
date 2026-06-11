@@ -477,7 +477,8 @@ onMounted(async () => {
         overflow-y: scroll;
 
         .rightContent {
-            width: 60vw;
+            width: 100%;
+            max-width: 60vw;
             height: 100%;
             margin: 0 auto;
 

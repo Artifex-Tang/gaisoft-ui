@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import { Delete, Edit, Search, Share, Upload, Refresh } from '@element-plus/icons-vue'
+import { Delete, Edit, Search, Share, Upload, Refresh, VideoPlay, WarningFilled, EditPen, CircleClose, More, UploadFilled, CirclePlus } from '@element-plus/icons-vue'
 import { requestStream, commonReqRagFlowServer } from "@/api/app/ops.js";
 import common from "@/utils/common.js";
 import loadFileIcon from "@/utils/fileIcon.js";
@@ -30,6 +30,8 @@ let tableRef = ref(null)
 const tableData = ref()
 let editTargetFile = ref(null)
 let loadingTable = ref(true)
+let isSearching = ref(false)
+let totalBeforeSearch = ref(0)
 let searchBoj = ref({
     kb_id: '',
     keywords: "",
@@ -41,6 +43,17 @@ let refreshTimer = null
 
 let loadTableData = async (page = 1) => {
     searchBoj.value.page = page
+    loadingTable.value = true
+    // track search state
+    if (searchBoj.value.keywords && searchBoj.value.keywords.trim()) {
+        if (!isSearching.value) {
+            totalBeforeSearch.value = searchBoj.value.total
+        }
+        isSearching.value = true
+    } else {
+        isSearching.value = false
+        totalBeforeSearch.value = 0
+    }
     let res = await commonReqRagFlowServer(`/api/v1/datasets/${searchBoj.value.kb_id}/documents?keywords=${searchBoj.value.keywords}&page_size=${searchBoj.value.page_size}&page=${searchBoj.value.page}`, 'get', null)
     console.log('获取表格数据', res)
     if (res.code == 0) {
@@ -66,12 +79,52 @@ let loadTableData = async (page = 1) => {
     }, 300);
 }
 
+let clearSearch = () => {
+    searchBoj.value.keywords = ''
+    isSearching.value = false
+    totalBeforeSearch.value = 0
+    loadTableData(1)
+}
+
 let handleCurrentChange = async (page) => {
     await loadTableData(page);
 }
 
+let selectedRows = ref([])
 let handleSelectionChange = (e) => {
-    console.log('选中的表格数据', e)
+    selectedRows.value = e
+}
+
+// batch operations
+let batchParse = async () => {
+    if (selectedRows.value.length === 0) { ElMessage.warning('请先勾选文件'); return }
+    let nonVirtual = selectedRows.value.filter(r => r.type !== 'virtual' && (r.run === 'UNSTART' || r.run === 'FAIL' || r.run === 'CANCEL'))
+    if (nonVirtual.length === 0) { ElMessage.info('没有可解析的文件'); return }
+    let ids = nonVirtual.map(r => r.id)
+    try {
+        await commonReqRagFlowServer(
+            `/api/v1/datasets/${searchBoj.value.kb_id}/chunks`,
+            'post', JSON.stringify({ "document_ids": ids })
+        )
+        ElMessage.success(`已开始解析 ${ids.length} 个文件`)
+        loadTableData(searchBoj.value.page)
+    } catch (e) { ElMessage.error('批量解析失败') }
+}
+
+let batchDelete = async () => {
+    if (selectedRows.value.length === 0) { ElMessage.warning('请先勾选文件'); return }
+    try {
+        await ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 个文件？`, '批量删除', { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' })
+    } catch { return }
+    let ids = selectedRows.value.map(r => r.id)
+    try {
+        await commonReqRagFlowServer(
+            `/api/v1/datasets/${searchBoj.value.kb_id}/documents`,
+            'delete', JSON.stringify({ "ids": ids })
+        )
+        ElMessage.success(`已删除 ${ids.length} 个文件`)
+        loadTableData(searchBoj.value.page)
+    } catch (e) { ElMessage.error('批量删除失败') }
 }
 
 // change enabled status
@@ -272,6 +325,65 @@ let getStatusLabel = (row) => {
     return map[row.run] || row.run
 }
 
+// show document info on name click
+let showDocInfo = (row) => {
+    const statusMap = { UNSTART: '未开始', RUNNING: '解析中', DONE: '已完成', FAIL: '失败', CANCEL: '已取消' }
+    const info = [
+        `文件名: ${row.name}`,
+        `分块数: ${row.chunk_count || 0}`,
+        `解析状态: ${statusMap[row.run] || row.run}`,
+        `切片方法: ${chunkMethodLabels[row.chunk_method] || row.chunk_method}`,
+        `文件大小: ${row.size ? (row.size / 1024).toFixed(1) + ' KB' : '-'}`,
+    ]
+    ElMessageBox.alert(info.join('<br>'), '文档详情', { dangerouslyUseHTMLString: true, confirmButtonText: '关闭' })
+}
+
+// chunk browser
+let chunkDialogVisible = ref(false)
+let chunkList = ref([])
+let chunkLoading = ref(false)
+let chunkDocName = ref('')
+let openChunkView = async (row) => {
+    if (row.run !== 'DONE') {
+        ElMessage.warning('文档尚未解析完成，无法查看分块')
+        return
+    }
+    if (row.type === 'virtual') {
+        ElMessage.info('文件夹不支持查看分块')
+        return
+    }
+    chunkDocName.value = row.name
+    chunkDialogVisible.value = true
+    chunkLoading.value = true
+    try {
+        let res = await commonReqRagFlowServer(
+            `/api/v1/datasets/${searchBoj.value.kb_id}/documents/${row.id}`,
+            'get', null
+        )
+        if (res.code === 0 && res.data) {
+            let doc = Array.isArray(res.data) ? res.data[0] : res.data
+            let docId = doc.id || row.id
+            // Load chunks for this document
+            let chunkRes = await commonReqRagFlowServer(
+                `/api/v1/datasets/${searchBoj.value.kb_id}/documents/${docId}/chunks?page=1&page_size=50`,
+                'get', null
+            )
+            if (chunkRes.code === 0 && chunkRes.data) {
+                let data = chunkRes.data
+                chunkList.value = data.chunks || data.doc_ids || (Array.isArray(data) ? data : [])
+            } else {
+                chunkList.value = []
+            }
+        } else {
+            chunkList.value = []
+        }
+    } catch (e) {
+        console.error('加载分块出错', e)
+        chunkList.value = []
+    }
+    chunkLoading.value = false
+}
+
 // auto refresh when parsing
 let hasRunningDocs = () => {
     return tableData.value && tableData.value.some(d => d.run == 'RUNNING')
@@ -297,22 +409,38 @@ onUnmounted(() => {
     <div class='dataSetRoot'>
         <p class="datasetTilte"><span class="title">数据集</span><span class="desTitle" style="font-size:14px;margin-left:10px;">😉 解析成功后才能问答哦</span></p>
         <p class="line"></p>
-        <div class="header">
+        <div class="header" @submit.prevent>
             <p style="height:100%;flex:1;width:0;"></p>
-            <el-input v-model="searchBoj.keywords" placeholder="请输入关键字" style="width: 200px;" @keyup.enter="loadTableData(1)" />
-            <el-button type="primary" style="margin-left: 10px;" @click="loadTableData(1)">搜索</el-button>
+            <el-input v-model="searchBoj.keywords" placeholder="请输入关键字" style="width: 200px;" @keyup.enter="loadTableData(1)" :disabled="!tableData || tableData.length === 0" />
+            <el-tooltip v-if="!tableData || tableData.length === 0" content="暂无文档，无法搜索" placement="top">
+                <el-button native-type="button" type="primary" style="margin-left: 10px;" disabled>搜索</el-button>
+            </el-tooltip>
+            <el-button v-else native-type="button" type="primary" style="margin-left: 10px;" @click="loadTableData(1)">搜索</el-button>
+            <el-button v-if="isSearching" type="info" style="margin-left: 6px;" @click="clearSearch">清除搜索</el-button>
+            <span v-if="isSearching" style="margin-left: 8px; font-size: 12px; color: #999;">搜索结果: {{ searchBoj.total }} 条</span>
             <el-button type="primary" :icon="Upload" style="margin-left: 10px;" @click="openUploadDialog">上传文件</el-button>
-            <el-button type="primary" :icon="Add" style="margin-left: 10px;" @click="createFolder">新建文件夹</el-button>
+            <el-button type="primary" :icon="CirclePlus" style="margin-left: 10px;" @click="createFolder">新建文件夹</el-button>
         </div>
 
-        <el-table ref="tableRef" :data="tableData" v-loading="loadingTable" stripe style="width: 100%;height: 550px;"
+        <!-- batch operations bar -->
+        <div v-if="selectedRows.length > 0" style="margin: 8px 0; padding: 8px 12px; background: #ecf5ff; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 14px; color: #409EFF;">已选中 {{ selectedRows.length }} 项</span>
+            <el-button size="small" type="success" @click="batchParse">
+                <el-icon><VideoPlay /></el-icon> 批量解析
+            </el-button>
+            <el-button size="small" type="danger" @click="batchDelete">
+                <el-icon><Delete /></el-icon> 批量删除
+            </el-button>
+        </div>
+
+        <el-table ref="tableRef" :data="tableData" v-loading="loadingTable" stripe style="width: 100%;flex: 1;overflow: auto;"
             @selection-change="handleSelectionChange">
             <el-table-column type="selection" width="45" />
             <el-table-column prop="name" label="名称" min-width="200">
                 <template #default="scope">
                     <div style="display: flex;align-items: center;">
                         <el-image style="width: 20px; height: 20px" :src="scope.row.FileIcon" />
-                        <span style="cursor: pointer;padding-left: 5px;">{{ scope.row.name }}</span>
+                        <span style="cursor: pointer;padding-left: 5px;color: #409EFF;" @click="openChunkView(scope.row)">{{ scope.row.name }}</span>
                     </div>
                 </template>
             </el-table-column>
@@ -377,8 +505,9 @@ onUnmounted(() => {
             </el-table-column>
         </el-table>
         <div class="pageBarBox">
-            <el-pagination background layout="prev, pager, next" :current-page="searchBoj.page"
-                :page-size="searchBoj.page_size" :total="searchBoj.total" @current-change="handleCurrentChange" />
+            <el-pagination background layout="total, sizes, prev, pager, next" :current-page="searchBoj.page"
+                :page-size="searchBoj.page_size" :page-sizes="[10, 20, 50, 100]" :total="searchBoj.total"
+                @current-change="handleCurrentChange" @size-change="(size) => { searchBoj.page_size = size; loadTableData(1) }" />
         </div>
 
         <!--修改文件名弹框-->
@@ -442,7 +571,7 @@ onUnmounted(() => {
             <el-upload class="upload-demo" drag :data="{kb_id:props.kb_id}" :multiple="true" :auto-upload="false" :headers="uploadFileheaders"
                 :action="baseUrl + '/kb/uploadforkb'" ref="uploadRef" :on-success="uploadFileSuccess"
                 :on-error="uploadFileError" multiple>
-                <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+                <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
                 <div class="el-upload__text">
                     将文件拖拽到此或<em>点击上传</em>
                 </div>
@@ -456,6 +585,26 @@ onUnmounted(() => {
                 <el-button type="primary" @click="uploadFileProcess">确定</el-button>
             </el-form-item>
         </el-dialog>
+
+        <!--Chunk浏览弹框-->
+        <el-dialog v-model="chunkDialogVisible" :title="`分块浏览 - ${chunkDocName}`" width="80%" top="5vh" destroy-on-close>
+            <div v-loading="chunkLoading" style="min-height: 200px;">
+                <el-empty v-if="!chunkLoading && chunkList.length === 0" description="暂无分块数据" />
+                <div v-else style="max-height: 60vh; overflow-y: auto;">
+                    <div v-for="(chunk, idx) in chunkList" :key="chunk.id || idx"
+                        style="border: 1px solid #ebeef5; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: 600; color: #409EFF;">分块 #{{ idx + 1 }}</span>
+                            <span style="font-size: 12px; color: #999;">ID: {{ (chunk.id || '').substring(0, 12) }}...</span>
+                        </div>
+                        <p style="margin: 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-all;">{{ chunk.content || chunk.content_with_weight || '(无内容)' }}</p>
+                        <div v-if="chunk.similarity !== undefined" style="margin-top: 6px; font-size: 12px; color: #999;">
+                            相似度: {{ chunk.similarity?.toFixed(4) || '-' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </el-dialog>
     </div>
 </template>
 
@@ -464,9 +613,11 @@ onUnmounted(() => {
     color: #000;
     width: 100%;
     height: calc(90vh - 100px);
-    overflow: hidden;
+    overflow: auto;
     box-sizing: border-box;
     padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
 
     .datasetTilte {
         display: flex;
@@ -495,9 +646,11 @@ onUnmounted(() => {
     .pageBarBox {
         width: 100%;
         height: 50px;
+        min-height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding-top: 8px;
     }
 }
 </style>

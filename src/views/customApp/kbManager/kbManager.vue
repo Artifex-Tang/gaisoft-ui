@@ -99,9 +99,10 @@ let cutPage = (page) => {
     }
 
     .rightBox {
-        width: 85vw;
+        width: calc(100% - 15vw);
+        min-width: 0;
         height: 100%;
-        background-color: rebeccapurple;
+        overflow: auto;
     }
 }
 </style>

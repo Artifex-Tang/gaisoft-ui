@@ -247,6 +247,7 @@ onMounted(async () => {
     margin: 0;
     width: 100%;
     height: calc(100vh - 84px);
+    overflow-y: auto;
     box-sizing: border-box;
     padding: 20px 10px;
     padding-left: 50px;
@@ -257,8 +258,11 @@ onMounted(async () => {
     }
 
     .listBox {
-        width: 1500px;
+        width: 100%;
+        max-width: 1500px;
         margin-top: 10px;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
 
         ul {
             width: 100%;

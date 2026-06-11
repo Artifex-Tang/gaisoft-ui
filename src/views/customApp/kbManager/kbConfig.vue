@@ -67,7 +67,9 @@ let loadConfig = async () => {
         let res = await commonReqRagFlowServer(`/api/v1/datasets?id=${props.kb_id}`, 'get', null)
         console.log('加载知识库配置', res)
         if (res.code == 0 && res.data) {
-            let ds = res.data
+            // ragflow 0.18.0 returns array for list endpoints
+            let ds = Array.isArray(res.data) ? res.data[0] : res.data
+            if (!ds) { ElMessage.error('未找到知识库'); loading.value = false; return }
             formObj.value.name = ds.name || ""
             formObj.value.avatar = ds.avatar || ""
             formObj.value.description = ds.description || ""

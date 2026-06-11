@@ -186,7 +186,8 @@ TypeScript 快速上⼿⼀、TypeScript 简介tiany三、编译TypeScript. 命�
     color: #000;
     width: 100%;
      height: calc(90vh - 100px);
-     overflow: hidden;
+     overflow-y: auto;
+     overflow-x: hidden;
     display: flex;
     justify-content: center;
 
