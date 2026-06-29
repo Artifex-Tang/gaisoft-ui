@@ -40,10 +40,9 @@ let common = {
         // //window.open(pdfUrl, '_blank')
         // window.open(`${common.baseUrl}/filePage?url=${common.str2Base64(fileUrl)}`, '_blank');
 
-        // 经 /file/view 代理(/file/** permitAll, 后端带 RagFlowKey), suffix 决定 content-type:
-        // pdf -> 浏览器PDF查看器; png/jpg/jpeg/gif -> 浏览器原生渲染图片; docx/xlsx/ppt -> 浏览器下载
-        let docUrl = `${common.ragFlowUrl}/v1/document/get/${fileId}`
-        window.open(`${common.baseUrl}/file/view?pdfUrl=${docUrl}&suffix=${fileExt}`, '_blank')
+        // 统一走 /preview 预览页(SPA路由): pdf->iframe, 图片->img, docx->docx-preview, xlsx->SheetJS表格
+        // 预览页内 fetch /prod-api/file/doc/{id}?suffix= 代理ragflow(带API key + content-type)
+        window.open(`/preview?fileId=${fileId}&ext=${fileExt}&name=${encodeURIComponent(fileName || '')}`, '_blank')
 
         //let url = common.ragFlowUrl + `/document/${fileId}?ext=${fileExt}&prefix=file`
         //let url = `${common.ragFlowUrl}/v1/file/get/${fileId}&fileName=$(common.str2Base64(fileName))}`
