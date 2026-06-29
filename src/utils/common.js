@@ -40,16 +40,10 @@ let common = {
         // //window.open(pdfUrl, '_blank')
         // window.open(`${common.baseUrl}/filePage?url=${common.str2Base64(fileUrl)}`, '_blank');
 
-        if(fileExt=='pdf'){
-                let pdfUrl = `${common.baseUrl}/file/view?pdfUrl=${common.ragFlowUrl}/v1/document/get/${fileId}`;// "http://115.190.23.140/v1/document/get/ce84eddc58a611f080b00242ac120006" //url
-                //console.log('pdfUrl', pdfUrl)
-                window.open(pdfUrl, '_blank')
-        }
-        else{//执行下载
-            ElMessage.warning('该文件类型暂不支持预览')
-            // common.commonDownloadFile(fileId, fileName, fileExt);
-            return; 
-        }
+        // 经 /file/view 代理(/file/** permitAll, 后端带 RagFlowKey), suffix 决定 content-type:
+        // pdf -> 浏览器PDF查看器; png/jpg/jpeg/gif -> 浏览器原生渲染图片; docx/xlsx/ppt -> 浏览器下载
+        let docUrl = `${common.ragFlowUrl}/v1/document/get/${fileId}`
+        window.open(`${common.baseUrl}/file/view?pdfUrl=${docUrl}&suffix=${fileExt}`, '_blank')
 
         //let url = common.ragFlowUrl + `/document/${fileId}?ext=${fileExt}&prefix=file`
         //let url = `${common.ragFlowUrl}/v1/file/get/${fileId}&fileName=$(common.str2Base64(fileName))}`
