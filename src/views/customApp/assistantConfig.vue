@@ -213,8 +213,7 @@ const formToRagflow = (form) => {
             frequency_penalty: form.llm_setting.frequency_penalty,
             max_tokens: 512,
         },
-        datasets: form.kb_ids,  // ragflow 0.18.0 accepts both 'datasets' and 'dataset_ids' for backward compat
-        dataset_ids: form.kb_ids,
+        dataset_ids: form.kb_ids,  // ragflow 0.18.0 update rejects 'datasets' field — use dataset_ids only
         prompt: {
             prompt: form.prompt_config.system,
             opener: form.prompt_config.prologue,
