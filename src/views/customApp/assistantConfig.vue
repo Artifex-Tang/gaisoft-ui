@@ -413,6 +413,12 @@ let handleChange = async (e) => {
     console.log(base64)
     dialogForm.value.icon = base64
 }
+// 预置助理头像（CogView生成，存于 public/imgs）
+const presetAvatars = [
+    '/imgs/avatar_assistant_1.png', '/imgs/avatar_assistant_2.png',
+    '/imgs/avatar_assistant_3.png', '/imgs/avatar_assistant_4.png',
+    '/imgs/avatar_assistant_5.png', '/imgs/avatar_assistant_6.png',
+]
 const languageOptions = [
     { value: 'English', label: 'English' },
     { value: 'Chinese', label: 'Chinese' },
@@ -513,19 +519,22 @@ onMounted(async () => {
                         </el-form-item>
 
                         <el-form-item label="头像">
-                            <el-upload class="avatar-uploader" action="#" :auto-upload="false" :show-file-list="false"
-                                :on-change="handleChange">
-                                <img v-if="dialogForm.icon" :src="dialogForm.icon" class="avatar"
-                                    style="width: 80px;height: 80px;object-fit: fill;" />
-                                <!-- <div class="uploadIconBox"> -->
-                                <p v-if="dialogForm.icon" style="width: 10px;height: 50px;"></p>
-                                <el-icon class="avatar-uploader-icon" size="80"
-                                    style="border: 1px dashed #ccc;box-sizing:border-box;padding: 20px;">
-                                    <Plus />
-                                </el-icon>
-                                <!-- </div> -->
-
-                            </el-upload>
+                            <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+                                <img v-if="dialogForm.icon" :src="dialogForm.icon"
+                                    style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #eee;" />
+                                <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleChange">
+                                    <el-button :icon="Upload" size="small">上传自定义</el-button>
+                                </el-upload>
+                                <el-button v-if="dialogForm.icon" :icon="Delete" size="small" type="danger"
+                                    @click="dialogForm.icon = ''">删除</el-button>
+                            </div>
+                            <div style="margin-top:8px;font-size:12px;color:#999;">或从预置头像选择：</div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                                <img v-for="a in presetAvatars" :key="a" :src="a" @click="dialogForm.icon = a"
+                                    @mouseover="$event.target.style.borderColor='#409EFF'"
+                                    @mouseout="$event.target.style.borderColor='#eee'"
+                                    style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid #eee;cursor:pointer;" />
+                            </div>
                         </el-form-item>
                         <el-form-item label="空回复"
                             title="如果在知识库中没有检索到用户的问题，它将使用它作为答案。 如果您希望 LLM 在未检索到任何内容时提出自己的意见，请将此留空。">

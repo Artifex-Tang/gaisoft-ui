@@ -356,24 +356,14 @@ let openChunkView = async (row) => {
     chunkDialogVisible.value = true
     chunkLoading.value = true
     try {
-        let res = await commonReqRagFlowServer(
-            `/api/v1/datasets/${searchBoj.value.kb_id}/documents/${row.id}`,
+        // ragflow 0.18.0: list chunks directly by document id (row.id is the doc id from the list)
+        let chunkRes = await commonReqRagFlowServer(
+            `/api/v1/datasets/${searchBoj.value.kb_id}/documents/${row.id}/chunks?page=1&page_size=50`,
             'get', null
         )
-        if (res.code === 0 && res.data) {
-            let doc = Array.isArray(res.data) ? res.data[0] : res.data
-            let docId = doc.id || row.id
-            // Load chunks for this document
-            let chunkRes = await commonReqRagFlowServer(
-                `/api/v1/datasets/${searchBoj.value.kb_id}/documents/${docId}/chunks?page=1&page_size=50`,
-                'get', null
-            )
-            if (chunkRes.code === 0 && chunkRes.data) {
-                let data = chunkRes.data
-                chunkList.value = data.chunks || data.doc_ids || (Array.isArray(data) ? data : [])
-            } else {
-                chunkList.value = []
-            }
+        if (chunkRes.code === 0 && chunkRes.data) {
+            let data = chunkRes.data
+            chunkList.value = data.chunks || data.doc_ids || (Array.isArray(data) ? data : [])
         } else {
             chunkList.value = []
         }

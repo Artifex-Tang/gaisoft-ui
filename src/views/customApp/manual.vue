@@ -266,9 +266,10 @@ onMounted(async () => {
 
         ul {
             width: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 350px);
+            justify-content: center;
+            gap: 20px;
             margin: 0;
             padding: 0;
 
@@ -279,10 +280,8 @@ onMounted(async () => {
                 box-sizing: border-box;
                 border: 1px solid #ccc;
                 border-radius: 10px;
-                margin-left: 30px;
                 box-sizing: border-box;
                 padding: 20px;
-                margin-top: 20px;
 
                 .topBox {
                     display: flex;
@@ -323,9 +322,6 @@ onMounted(async () => {
                 }
             }
 
-            li:nth-child(4n+1) {
-                margin-left: 0px;
-            }
         }
     }
 

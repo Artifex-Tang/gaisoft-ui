@@ -231,16 +231,12 @@ let converseWithChatAssistant = async () => {
     searchRequestiing.value = true
 
     //开始请求数据
+    // ragflow 0.18.0: POST /api/v1/chats/{chat_id}/completions (legacy /v1/conversation/completion rejects API key with code:401)
     common.streamModelResponse({
-        "url": '/v1/conversation/completion',
-        "conversation_id": sessionId,
-        "messages": [
-            {
-                "content": searchInput.value,
-                "id": "",
-                "role": "user"
-            }
-        ]
+        "url": `/api/v1/chats/${chat_id}/completions`,
+        "question": searchInput.value,
+        "session_id": sessionId,
+        "stream": true
     }, (msg) => {
         // msg=msg.replace('data:{"code": 0, "message": "", "data": true}', '').substring(5)
         if (msg != "") {
@@ -841,6 +837,8 @@ onMounted(async () => {
             border-radius: 14px;
             position: relative;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
 
             .welcomeTxt {
                 color: #272727;
@@ -854,7 +852,8 @@ onMounted(async () => {
             .chatRecordBox {
                 width: 700px;
                 margin: 0 auto;
-                height: 500px;
+                flex: 1;
+                min-height: 0;
                 box-sizing: border-box;
                 margin-bottom: 20px;
                 margin-top: 20px;

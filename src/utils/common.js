@@ -210,6 +210,7 @@ answerStr=answerStr.replaceAll('begin_search_query|>','').replaceAll('<|end_sear
                 }
             }
         } catch (error) {
+            ElMessage.error(`对话请求失败：${error.message}`)
             onError?.(error);
         }
     },
@@ -246,6 +247,7 @@ answerStr=answerStr.replaceAll('begin_search_query|>','').replaceAll('<|end_sear
                     }
                 } else if (data.code && data.code !== 0) {
                     console.warn('ragflow error:', data.message);
+                    ElMessage.error(`Ragflow返回错误(code ${data.code})：${data.message || '未知错误'}`)
                 }
             } catch (e) {
                 console.warn('解析JSON失败:', e, '数据:', trimmedEvent);

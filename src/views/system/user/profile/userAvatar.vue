@@ -54,6 +54,17 @@
           <el-button type="primary" @click="uploadImg()">提 交</el-button>
         </el-col>
       </el-row>
+      <el-row style="margin-top: 12px;">
+        <el-col :span="24">
+          <div style="font-size: 12px; color: #999; margin-bottom: 6px;">或从预置头像选择（点击直接应用）：</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <img v-for="a in presetUserAvatars" :key="a" :src="a" @click="usePreset(a)"
+              @mouseover="$event.target.style.boxShadow='0 0 6px #409EFF'"
+              @mouseout="$event.target.style.boxShadow='none'"
+              style="width: 56px; height: 56px; object-fit: cover; border-radius: 50%; cursor: pointer; border: 2px solid #eee;" />
+          </div>
+        </el-col>
+      </el-row>
     </el-dialog>
   </div>
 </template>
@@ -139,6 +150,27 @@ function uploadImg() {
       visible.value = false;
     });
   });
+}
+
+// 预置用户头像（CogView生成，存于 public/imgs）
+const presetUserAvatars = [
+  '/imgs/avatar_user_1.png', '/imgs/avatar_user_2.png',
+  '/imgs/avatar_user_3.png', '/imgs/avatar_user_4.png',
+  '/imgs/avatar_user_5.png', '/imgs/avatar_user_6.png',
+];
+// 点选预置头像：fetch 成 blob 后走与上传相同的持久化通道
+function usePreset(url) {
+  fetch(url).then(r => r.blob()).then(blob => {
+    let formData = new FormData();
+    formData.append("avatarfile", blob, url.split('/').pop());
+    uploadAvatar(formData).then(response => {
+      open.value = false;
+      options.img = import.meta.env.VITE_APP_BASE_API + response.imgUrl;
+      userStore.avatar = options.img;
+      proxy.$modal.msgSuccess("已应用预置头像");
+      visible.value = false;
+    });
+  }).catch(() => proxy.$modal.msgError("预置头像加载失败"));
 }
 
 /** 实时预览 */
