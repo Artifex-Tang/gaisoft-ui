@@ -185,46 +185,34 @@ let search = async () => {
     searchRequesting.value = true
     //开始请求
 
-    common.streamModelResponse({
-        url: '/v1/conversation/ask',
-        "kb_ids": selectNode.value,
-        "question": question.value
-    }, (msg) => {
-        // msg=msg.replace('data:{"code": 0, "message": "", "data": true}', '').substring(5)
-        if (msg != "") {
-            console.log('msg', msg)
-            answer.value = {
-                done: false,
-                content: msg.answer,
-                packageContent: common.packageAnswer(`${msg.answer}`),
-                reference: msg.reference,
-            }
-            doc_aggs.value=msg.reference?.doc_aggs||[]
-            scrollToBottom()
+    // 纯检索(像ragflow): POST /api/v1/retrieval 只返知识库匹配chunks+出处, 不经LLM生成, 不会混入生成内容
+    let questionText = question.value
+    try {
+        let ret = await commonReqRagFlowServer('/api/v1/retrieval', 'post',
+            JSON.stringify({ question: questionText, dataset_ids: selectNode.value, page: 1, page_size: 6, similarity_threshold: 0.2, vector_similarity_weight: 0.3 }))
+        let chunks = (ret && ret.data && ret.data.chunks) || []
+        let docMap = {}
+        let parts = chunks.map(c => {
+            let dn = c.document_keyword || c.doc_name || c.document_name || ''
+            if (dn && !(dn in docMap)) docMap[dn] = c.document_id || c.doc_id || ''
+            return c.content || ''
+        }).filter(Boolean)
+        answer.value = {
+            done: true,
+            content: parts.length ? parts.join('\n\n———\n\n') : '知识库中未找到相关内容',
+            packageContent: common.packageAnswer(parts.join('\n\n')),
+            reference: { doc_aggs: Object.keys(docMap).map(n => ({ doc_name: n, doc_id: docMap[n] })) },
         }
-        else {
-            //console.log('空msg')
-        }
-
-    },
-        async () => {
-            //console.log('完成')
-            searchRequesting.value = false
-            if (answer.value) answer.value.done = true
-            console.log('answer', answer.value)
-
-            //  nextTick(() => {
-            //      common.handleDynamicComponents(resultBox,dynamicComponents,answer.value.reference,previewImg,previewFile)
-            // })
-
-        },
-        (err) => {
-            //console.log('错误', err)
-        },
-        () => {
-            return !searchRequesting.value
-        }
-    )
+        doc_aggs.value = answer.value.reference.doc_aggs
+        scrollToBottom()
+    } catch (e) {
+        console.error('检索出错', e)
+        answer.value = { done: true, content: '检索失败：' + (e.message || e), packageContent: '', reference: { doc_aggs: [] } }
+        doc_aggs.value = []
+    } finally {
+        searchRequesting.value = false
+        if (answer.value) answer.value.done = true
+    }
 }
 let stopSearch = () => {
     searchRequesting.value = false
